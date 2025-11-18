@@ -1,98 +1,322 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Retailer Sales Platform - Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> NestJS backend API for managing field sales operations across Bangladesh
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 Quick Start
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+### With Docker (Recommended)
 
 ```bash
-$ npm install
+# Start all services (PostgreSQL, Redis, NestJS)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f backend
+
+# Stop services
+docker-compose down
 ```
 
-## Compile and run the project
+The API will be available at **http://localhost:3000**
+
+### Local Development (Without Docker)
 
 ```bash
-# development
-$ npm run start
+# Install dependencies
+npm install
 
-# watch mode
-$ npm run start:dev
+# Generate Prisma Client
+npx prisma generate
 
-# production mode
-$ npm run start:prod
+# Run database migrations
+npx prisma migrate dev
+
+# Seed database with test data
+npm run prisma:seed
+
+# Start development server
+npm run start:dev
 ```
 
-## Run tests
+## 📊 Database Management
+
+### Prisma Studio (Visual Database Browser)
 
 ```bash
-# unit tests
-$ npm run test
+# Open Prisma Studio
+npx prisma studio
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Opens at http://localhost:5555
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Common Prisma Commands
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Create new migration
+npx prisma migrate dev --name migration_name
+
+# Apply migrations (production)
+npx prisma migrate deploy
+
+# Reset database (⚠️ deletes all data)
+npx prisma migrate reset
+
+# View database schema
+npx prisma db pull
+
+# Format schema file
+npx prisma format
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 🧪 Testing
 
-## Resources
+```bash
+# Unit tests
+npm run test
 
-Check out a few resources that may come in handy when working with NestJS:
+# Watch mode
+npm run test:watch
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# E2E tests
+npm run test:e2e
 
-## Support
+# Test coverage
+npm run test:cov
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 🔧 Development Scripts
 
-## Stay in touch
+```bash
+# Development mode (hot reload)
+npm run start:dev
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# Debug mode
+npm run start:debug
 
-## License
+# Production build
+npm run build
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Production mode
+npm run start:prod
+
+# Linting
+npm run lint
+
+# Format code
+npm run format
+```
+
+## 🗄️ Database Schema
+
+### Key Tables
+
+- **retailers** - 1M retailers with 9 strategic indexes
+- **sales_reps** - Users (Admin + SRs) with authentication
+- **sales_rep_retailers** - Assignment junction table
+- **regions, areas, territories, distributors** - Reference data
+
+### Test Data (from seed.ts)
+
+- **210 retailers** (70 per SR)
+- **4 users**:
+  - `admin` / `password123` (ADMIN)
+  - `karim_sr` / `password123` (SR)
+  - `fatima_sr` / `password123` (SR)
+  - `john_sr` / `password123` (SR)
+
+## 📁 Project Structure
+
+```
+backend/
+├── prisma/
+│   ├── schema.prisma          # Database schema
+│   ├── migrations/            # Version-controlled migrations
+│   └── seed.ts                # Test data generator
+│
+├── src/
+│   ├── auth/                  # ✅ JWT authentication
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
+│   │   ├── auth.module.ts
+│   │   ├── strategies/
+│   │   │   └── jwt.strategy.ts
+│   │   └── dto/
+│   │       └── login.dto.ts
+│   │
+│   ├── common/                # ✅ Shared utilities
+│   │   ├── guards/
+│   │   │   ├── jwt-auth.guard.ts
+│   │   │   └── roles.guard.ts
+│   │   └── decorators/
+│   │       ├── current-user.decorator.ts
+│   │       └── roles.decorator.ts
+│   │
+│   ├── prisma/                # ✅ Database access layer
+│   │   ├── prisma.service.ts
+│   │   └── prisma.module.ts
+│   │
+│   ├── redis/                 # ✅ Caching layer
+│   │   ├── redis.service.ts
+│   │   └── redis.module.ts
+│   │
+│   ├── retailers/             # 🔄 In Progress
+│   ├── admin/                 # ⏳ Planned
+│   │
+│   ├── app.module.ts          # Root module
+│   └── main.ts                # Entry point
+│
+├── test/                      # Test files
+├── docker-compose.yml         # Service orchestration
+├── Dockerfile                 # Container configuration
+└── .env                       # Environment variables
+```
+
+## 🌍 Environment Variables
+
+Create `.env` file in backend folder:
+
+```bash
+# Database
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/retailer_db?schema=public"
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# JWT
+JWT_SECRET=your-secret-key-change-in-production
+JWT_EXPIRES_IN=7d
+
+# Application
+NODE_ENV=development
+PORT=3000
+```
+
+## 🐳 Docker Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| PostgreSQL | 5432 | Primary database |
+| Redis | 6379 | Caching layer |
+| NestJS | 3000 | API server |
+| Prisma Studio | 5555 | Database GUI (manual start) |
+
+## 📝 API Endpoints
+
+### Authentication
+
+```bash
+POST /auth/login
+Content-Type: application/json
+
+{
+  "username": "karim_sr",
+  "password": "password123"
+}
+
+# Response:
+{
+  "access_token": "eyJhbGci...",
+  "user": {
+    "id": 2,
+    "username": "karim_sr",
+    "name": "Karim Ahmed",
+    "role": "SR"
+  }
+}
+```
+
+### Protected Routes (Requires JWT)
+
+```bash
+# Add to headers:
+Authorization: Bearer <your_jwt_token>
+```
+
+### Retailers (In Progress)
+- `GET /retailers` - List assigned retailers (paginated, filtered)
+- `GET /retailers/:uid` - Get retailer details
+- `PATCH /retailers/:uid` - Update retailer (points, routes, notes)
+
+### Admin (Planned)
+- `GET/POST/PUT/DELETE /admin/regions` - CRUD regions
+- `GET/POST/PUT/DELETE /admin/areas` - CRUD areas
+- `GET/POST/PUT/DELETE /admin/distributors` - CRUD distributors
+- `GET/POST/PUT/DELETE /admin/territories` - CRUD territories
+- `POST /admin/assignments/bulk` - Bulk assign retailers to SRs
+- `POST /admin/retailers/import` - CSV bulk import
+
+## 🔐 Security Features
+
+- **JWT Authentication** - Stateless token-based auth
+- **Password Hashing** - bcrypt with salt (10 rounds)
+- **Role-Based Access Control** - Admin vs SR permissions
+- **Input Validation** - DTOs with class-validator
+- **SQL Injection Protection** - Prisma parameterized queries
+- **Data Isolation** - SRs can only access assigned retailers
+
+## 🚀 Performance Features
+
+- **Redis Caching** - Cache-aside pattern for frequent queries
+- **Database Indexing** - 9 strategic indexes on retailers table
+- **Connection Pooling** - Prisma manages DB connections
+- **N+1 Prevention** - Prisma includes for relation fetching
+- **Offset Pagination** - Efficient data retrieval
+
+## 📚 Learning Resources
+
+For detailed explanations and learning materials, see the `docs/` folder (private, not in git):
+- **LEARNING_GUIDE.md** - Complete walkthrough with Q&A
+- **ENGINEERING_JOURNAL.md** - All technical decisions
+- **NODEJS_NESTJS_GUIDE.md** - Learning path
+- **DOCKER_GUIDE.md** - Docker understanding
+- **QUICK_TIPS.md** - Productivity shortcuts
+
+## 🐛 Troubleshooting
+
+### Port Already in Use
+
+```bash
+# Stop Docker containers
+docker-compose down
+
+# Or stop local PostgreSQL
+sudo systemctl stop postgresql
+```
+
+### Prisma Client Not Generated
+
+```bash
+npx prisma generate
+```
+
+### Database Connection Issues
+
+```bash
+# Check if PostgreSQL is running
+docker-compose ps
+
+# Check connection
+docker-compose exec postgres psql -U postgres -d retailer_db
+```
+
+### Module Not Found Errors
+
+```bash
+# Reinstall dependencies
+rm -rf node_modules
+npm install
+
+# Rebuild Docker
+docker-compose up --build
+```
+
+## 📞 Support
+
+- NestJS Docs: https://docs.nestjs.com
+- Prisma Docs: https://www.prisma.io/docs
+- Redis Docs: https://redis.io/docs
+
+---
+
+**Built with**: NestJS 11 + Prisma 6 + PostgreSQL 15 + Redis 7 + TypeScript 5
