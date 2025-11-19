@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { RetailersModule } from './retailers/retailers.module';
+import { AdminModule } from './admin/admin.module';
 
 /**
  * AppModule: Root module of the application
@@ -16,6 +17,7 @@ import { RetailersModule } from './retailers/retailers.module';
  * - RedisModule: Provides caching to entire app (@Global module)
  * - AuthModule: Provides authentication endpoints and JWT validation
  * - RetailersModule: Provides retailer management endpoints
+ * - AdminModule: Provides admin-only CRUD endpoints for reference data
  *
  * Why ConfigModule.forRoot({ isGlobal: true })?
  * - Makes environment variables available everywhere
@@ -27,6 +29,7 @@ import { RetailersModule } from './retailers/retailers.module';
  * 3. RedisModule (needs REDIS_HOST, REDIS_PORT from config)
  * 4. AuthModule (needs JWT_SECRET from config)
  * 5. RetailersModule (uses PrismaModule and RedisModule)
+ * 6. AdminModule (uses PrismaModule, ADMIN-only endpoints)
  */
 @Module({
   imports: [
@@ -42,6 +45,8 @@ import { RetailersModule } from './retailers/retailers.module';
     AuthModule,
     // Retailers management
     RetailersModule,
+    // Admin management (CRUD for reference data)
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
