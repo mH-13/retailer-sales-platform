@@ -1,4 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 
@@ -21,7 +22,13 @@ import { LoginDto } from './dto/login.dto';
  * 4. AuthService: Validates credentials, generates JWT
  * 5. Controller: Returns { access_token, user }
  * 6. Client: Stores token, uses in future requests
+ *
+ * Swagger Decorators:
+ * - @ApiTags('Authentication'): Groups all auth endpoints under "Authentication" in Swagger UI
+ * - @ApiOperation(): Describes what each endpoint does
+ * - @ApiResponse(): Documents possible HTTP responses (success and errors)
  */
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -49,11 +56,44 @@ export class AuthController {
    *   "message": "Invalid credentials"
    * }
    *
+   * Swagger Decorators:
+   * - @ApiOperation(): Shows "Login to get JWT token" in Swagger UI
+   * - @ApiResponse() 200: Documents successful login response
+   * - @ApiResponse() 401: Documents authentication failure
+   * - @ApiResponse() 400: Documents validation errors (from LoginDto)
+   *
    * @param loginDto - Validated login credentials
    * @returns JWT token and user info
    */
   @Post('login')
   @HttpCode(HttpStatus.OK) // Return 200 instead of 201
+  @ApiOperation({
+    summary: 'Login to get JWT token',
+    description: 'Authenticate with username and password to receive a JWT access token',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful - returns JWT token and user details',
+    schema: {
+      example: {
+        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        user: {
+          id: 1,
+          username: 'karim_sr',
+          name: 'Karim Ahmed',
+          role: 'SR',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid credentials',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error - username or password missing/invalid',
+  })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }

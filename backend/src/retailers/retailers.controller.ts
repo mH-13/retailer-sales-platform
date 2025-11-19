@@ -7,6 +7,7 @@ import {
   Body,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { RetailersService } from './retailers.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -31,8 +32,17 @@ import { UpdateRetailerDto } from './dto/update-retailer.dto';
  * - PUT = full replacement (must send all fields)
  * - We use PATCH because SRs update only specific fields
  *
+ * Swagger Decorators:
+ * - @ApiTags('Retailers'): Groups all retailer endpoints under "Retailers" section
+ * - @ApiBearerAuth(): Shows lock icon, requires JWT token to test endpoints
+ * - @ApiOperation(): Describes what each endpoint does
+ * - @ApiQuery(): Documents query parameters (page, limit, search, filters)
+ * - @ApiResponse(): Documents possible responses
+ *
  * Example requests in LEARNING_GUIDE.md
  */
+@ApiTags('Retailers')
+@ApiBearerAuth()  // All routes require JWT - shows lock icon in Swagger
 @Controller('retailers')
 @UseGuards(JwtAuthGuard)  // All routes require JWT authentication
 export class RetailersController {
@@ -87,11 +97,56 @@ export class RetailersController {
    * - Admins see all retailers
    * - Handled in service layer, not here
    *
+   * Swagger Decorators:
+   * - @ApiQuery(): Documents each query parameter with type and description
+   * - @ApiResponse() 200: Shows successful response structure
+   *
    * @param query - Query parameters (validated by QueryRetailersDto)
    * @param user - Current user (extracted from JWT by @CurrentUser())
    * @returns Paginated list of retailers
    */
   @Get()
+  @ApiOperation({
+    summary: 'List all retailers (with pagination, search, filters)',
+    description: 'Get paginated list of retailers. Sales Reps see only assigned retailers, Admins see all.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20, max: 100)' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name, phone, or UID' })
+  @ApiQuery({ name: 'region', required: false, type: Number, description: 'Filter by region ID' })
+  @ApiQuery({ name: 'area', required: false, type: Number, description: 'Filter by area ID' })
+  @ApiQuery({ name: 'distributor', required: false, type: Number, description: 'Filter by distributor ID' })
+  @ApiQuery({ name: 'territory', required: false, type: Number, description: 'Filter by territory ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved retailers',
+    schema: {
+      example: {
+        data: [
+          {
+            id: 1,
+            uid: 'RET-DHA-001',
+            name: 'Rahman Store',
+            phone: '01711111111',
+            points: 100,
+            routes: 'Route A',
+            notes: 'Good customer',
+            region: { id: 1, name: 'Dhaka' },
+            area: { id: 1, name: 'Gulshan' },
+          },
+        ],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 70,
+          totalPages: 4,
+          hasNext: true,
+          hasPrev: false,
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
   async findAll(
     @Query() query: QueryRetailersDto,
     @CurrentUser() user: any,
@@ -138,6 +193,41 @@ export class RetailersController {
    * @returns Single retailer with relations
    */
   @Get(':uid')
+  @ApiOperation({
+    summary: 'Get single retailer by UID',
+    description: 'Retrieve detailed information about a specific retailer. Includes all relations.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved retailer',
+    schema: {
+      example: {
+        id: 1,
+        uid: 'RET-DHA-001',
+        name: 'Rahman Store',
+        phone: '01711111111',
+        points: 100,
+        routes: 'Route A',
+        notes: 'Good customer',
+        region: { id: 1, name: 'Dhaka' },
+        area: { id: 1, name: 'Gulshan' },
+        distributor: { id: 1, name: 'Dist A' },
+        territory: { id: 1, name: 'Territory 1' },
+        assignments: [
+          {
+            salesRep: {
+              id: 2,
+              username: 'karim_sr',
+              name: 'Karim Ahmed',
+            },
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Retailer not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Sales Rep trying to access unassigned retailer' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
   async findOne(
     @Param('uid') uid: string,
     @CurrentUser() user: any,
@@ -184,6 +274,31 @@ export class RetailersController {
    * @returns Updated retailer
    */
   @Patch(':uid')
+  @ApiOperation({
+    summary: 'Update retailer (points, routes, notes)',
+    description: 'Partially update a retailer. Only points, routes, and notes can be updated. All fields optional.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated retailer',
+    schema: {
+      example: {
+        id: 1,
+        uid: 'RET-DHA-001',
+        name: 'Rahman Store',
+        phone: '01711111111',
+        points: 150,
+        routes: 'Route A, Route B',
+        notes: 'Prefers morning delivery',
+        region: { id: 1, name: 'Dhaka' },
+        area: { id: 1, name: 'Gulshan' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Retailer not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Sales Rep trying to update unassigned retailer' })
+  @ApiResponse({ status: 400, description: 'Validation error - Invalid data (e.g., negative points)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
   async update(
     @Param('uid') uid: string,
     @Body() updateData: UpdateRetailerDto,

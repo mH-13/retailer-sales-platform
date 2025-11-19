@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsString, MinLength, MaxLength, IsInt } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * CreateAreaDto
@@ -20,6 +21,10 @@ import { IsNotEmpty, IsString, MinLength, MaxLength, IsInt } from 'class-validat
  * }
  */
 export class CreateAreaDto {
+  @ApiProperty({
+    description: 'Area name (3-100 characters)',
+    example: 'Gulshan',
+  })
   @IsNotEmpty({ message: 'Area name is required' })
   @IsString({ message: 'Area name must be a string' })
   @MinLength(3, { message: 'Area name must be at least 3 characters' })
@@ -33,6 +38,11 @@ export class CreateAreaDto {
    * - Database enforces this (non-null foreign key)
    * - Business rule: Every area must be in a region
    */
+  @ApiProperty({
+    description: 'ID of the region this area belongs to',
+    example: 1,
+    type: 'integer',
+  })
   @IsNotEmpty({ message: 'Region ID is required' })
   @IsInt({ message: 'Region ID must be an integer' })
   regionId: number;

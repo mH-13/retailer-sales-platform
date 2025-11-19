@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsString, MinLength, MaxLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * CreateRegionDto
@@ -36,10 +37,21 @@ export class CreateRegionDto {
    * - MinLength(3): Most region names are at least 3 chars ("Cox" is edge case)
    * - MaxLength(100): Reasonable limit, prevents database overflow attacks
    *
+   * Swagger @ApiProperty:
+   * - Shows example value in Swagger UI
+   * - Describes the field for API documentation
+   * - Makes it easy for users to test the API
+   *
    * Interview Q: "What happens if validation fails?"
    * A: "NestJS's ValidationPipe automatically returns 400 Bad Request with
    *     detailed error messages showing which validations failed"
    */
+  @ApiProperty({
+    description: 'Region name (3-100 characters)',
+    example: 'Rajshahi',
+    minLength: 3,
+    maxLength: 100,
+  })
   @IsNotEmpty({ message: 'Region name is required' })
   @IsString({ message: 'Region name must be a string' })
   @MinLength(3, { message: 'Region name must be at least 3 characters' })
