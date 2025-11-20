@@ -1,0 +1,9 @@
+uid,name,phone,regionId,areaId,distributorId,territoryId,points,routes,notes
+RET-TEST-001,Test Store 1,01711111111,1,1,1,1,100,"Route A","Sample retailer for testing import"
+RET-TEST-002,Test Store 2,01722222222,1,2,1,2,50,"Route B",""
+RET-TEST-003,Test Store 3,01733333333,2,3,2,3,0,"","New retailer with no points"
+RET-TEST-004,Test Store 4,01744444444,,,,,,,"Retailer without region/area (all optional fields null)"
+RET-TEST-005,Test Store 5,01711111111,1,1,1,1,1000,"Route C","Sample retailer"
+RET-TEST-006,Test Store 6,01722222221,1,2,1,2,500,"Route D",""
+RET-TEST-007,Test Store 7,01733333323,2,3,2,3,0,"","New retailer"
+RET-TEST-008,Test Store 8,01744434444,,,,,,,"No geo data"
