@@ -4,29 +4,10 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 
 /**
- * AuthController: Handles authentication endpoints
+ * Authentication controller
  *
- * What @Controller('auth') means:
- * - All routes in this controller start with /auth
- * - Example: @Post('login') becomes POST /auth/login
- *
- * Why @HttpCode(HttpStatus.OK)?
- * - By default, @Post returns 201 Created
- * - Login should return 200 OK (standard practice)
- * - HttpStatus.OK is more readable than magic number 200
- *
- * Request/Response flow:
- * 1. Client: POST /auth/login { username, password }
- * 2. NestJS: Validates LoginDto (class-validator)
- * 3. Controller: Passes to AuthService
- * 4. AuthService: Validates credentials, generates JWT
- * 5. Controller: Returns { access_token, user }
- * 6. Client: Stores token, uses in future requests
- *
- * Swagger Decorators:
- * - @ApiTags('Authentication'): Groups all auth endpoints under "Authentication" in Swagger UI
- * - @ApiOperation(): Describes what each endpoint does
- * - @ApiResponse(): Documents possible HTTP responses (success and errors)
+ * Handles login endpoint with JWT token generation
+ * Returns 200 OK for login (not 201 Created) following REST conventions
  */
 @ApiTags('Authentication')
 @Controller('auth')
@@ -34,42 +15,14 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   /**
-   * Login endpoint
-   *
-   * POST /auth/login
-   * Body: { "username": "karim_sr", "password": "password123" }
-   *
-   * Success Response (200 OK):
-   * {
-   *   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-   *   "user": {
-   *     "id": 1,
-   *     "username": "karim_sr",
-   *     "name": "Karim Ahmed",
-   *     "role": "SR"
-   *   }
-   * }
-   *
-   * Error Response (401 Unauthorized):
-   * {
-   *   "statusCode": 401,
-   *   "message": "Invalid credentials"
-   * }
-   *
-   * Swagger Decorators:
-   * - @ApiOperation(): Shows "Login to get JWT token" in Swagger UI
-   * - @ApiResponse() 200: Documents successful login response
-   * - @ApiResponse() 401: Documents authentication failure
-   * - @ApiResponse() 400: Documents validation errors (from LoginDto)
-   *
-   * @param loginDto - Validated login credentials
-   * @returns JWT token and user info
+   * POST /auth/login - Authenticate and receive JWT token
    */
   @Post('login')
-  @HttpCode(HttpStatus.OK) // Return 200 instead of 201
+  @HttpCode(HttpStatus.OK) // Return 200 OK instead of 201 Created
   @ApiOperation({
     summary: 'Login to get JWT token',
-    description: 'Authenticate with username and password to receive a JWT access token',
+    description:
+      'Authenticate with username and password to receive a JWT access token',
   })
   @ApiResponse({
     status: 200,

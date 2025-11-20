@@ -12,7 +12,14 @@ import {
   UploadedFile,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -29,38 +36,13 @@ import { UpdateDistributorDto } from './dto/update-distributor.dto';
 import { BulkAssignmentDto } from './dto/bulk-assignment.dto';
 
 /**
- * AdminController
+ * Admin controller for reference data management
  *
- * What does this controller provide?
- * - All admin-only endpoints for managing reference data
- * - CRUD operations for regions, areas, territories, distributors
- * - Bulk assignment of retailers to sales reps
- * - CSV import for bulk retailer creation
- *
- * Security:
- * - @UseGuards(JwtAuthGuard, RolesGuard): EVERY endpoint requires valid JWT
- * - @Roles('ADMIN'): EVERY endpoint requires ADMIN role
- * - Sales Reps (SR role) get 403 Forbidden if they try to access
- *
- * Why class-level guards?
- * - Applied to ALL methods in this controller
- * - DRY: Write once, applies everywhere
- * - Can't accidentally forget to add guard to a method
- *
- * Swagger Decorators:
- * - @ApiTags('Admin'): Groups all admin endpoints under "Admin" section
- * - @ApiBearerAuth(): Requires JWT token (shows lock icon)
- * - @ApiOperation(): Describes each endpoint
- * - @ApiResponse(): Documents responses (success and errors)
- *
- * Interview Q: "What happens if SR tries POST /admin/regions?"
- * A: "1. JwtAuthGuard validates their token (succeeds)
- *     2. RolesGuard checks their role is 'ADMIN' (fails, they're 'SR')
- *     3. Returns 403 Forbidden
- *     4. Service method never executes (guarded at controller layer)"
+ * Security: All endpoints require JWT + ADMIN role (class-level guards)
+ * Provides: CRUD for regions/areas/territories/distributors, bulk operations, CSV import
  */
 @ApiTags('Admin')
-@ApiBearerAuth()  // All routes require JWT
+@ApiBearerAuth() // All routes require JWT
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard) // Both guards required
 @Roles('ADMIN') // Only ADMIN role allowed
@@ -71,87 +53,47 @@ export class AdminController {
   // REGIONS ENDPOINTS
   // ========================================
 
-  /**
-   * GET /admin/regions
-   * List all regions
-   *
-   * Example Response:
-   * [
-   *   { "id": 1, "name": "Dhaka", "createdAt": "...", "updatedAt": "..." },
-   *   { "id": 2, "name": "Chittagong", "createdAt": "...", "updatedAt": "..." }
-   * ]
-   */
+  // GET /admin/regions - List all regions
   @Get('regions')
-  @ApiOperation({ summary: 'List all regions', description: 'Get all regions in the system' })
+  @ApiOperation({
+    summary: 'List all regions',
+    description: 'Get all regions in the system',
+  })
   @ApiResponse({ status: 200, description: 'Successfully retrieved regions' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Only admins can access' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only admins can access',
+  })
   async findAllRegions() {
     return this.adminService.findAllRegions();
   }
 
-  /**
-   * GET /admin/regions/:id
-   * Get single region by ID
-   *
-   * @Param('id', ParseIntPipe)
-   * - Extracts :id from URL path
-   * - ParseIntPipe converts string to number
-   * - If conversion fails (e.g., /admin/regions/abc), returns 400 Bad Request
-   *
-   * Why ParseIntPipe?
-   * - URL params are always strings: "/admin/regions/1" → id = "1"
-   * - Service expects number: findOneRegion(id: number)
-   * - ParseIntPipe: "1" → 1 (number)
-   * - Validates it's a valid integer: "abc" → 400 error
-   *
-   * Example:
-   * GET /admin/regions/1  →  id = 1 (number) ✅
-   * GET /admin/regions/abc →  400 Bad Request ❌
-   */
+  // GET /admin/regions/:id - ParseIntPipe converts string ID to number and validates
   @Get('regions/:id')
   async findOneRegion(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.findOneRegion(id);
   }
 
-  /**
-   * POST /admin/regions
-   * Create new region
-   *
-   * @Body() createRegionDto: CreateRegionDto
-   * - Extracts request body JSON
-   * - Validates using CreateRegionDto rules
-   * - If validation fails, returns 400 with error details
-   *
-   * Example Request:
-   * POST /admin/regions
-   * Content-Type: application/json
-   * { "name": "Sylhet" }
-   *
-   * Example Response:
-   * { "id": 3, "name": "Sylhet", "createdAt": "...", "updatedAt": "..." }
-   */
+  // POST /admin/regions - Create new region with validation
   @Post('regions')
-  @ApiOperation({ summary: 'Create new region', description: 'Add a new region to the system' })
+  @ApiOperation({
+    summary: 'Create new region',
+    description: 'Add a new region to the system',
+  })
   @ApiResponse({ status: 201, description: 'Region created successfully' })
-  @ApiResponse({ status: 400, description: 'Validation error or duplicate name' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Only admins can access' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error or duplicate name',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only admins can access',
+  })
   async createRegion(@Body() createRegionDto: CreateRegionDto) {
     return this.adminService.createRegion(createRegionDto);
   }
 
-  /**
-   * PUT /admin/regions/:id
-   * Update existing region
-   *
-   * Why PUT instead of PATCH?
-   * - Doesn't matter much here (only 1 field)
-   * - Could use either
-   * - PUT traditionally means "full replacement"
-   * - PATCH means "partial update"
-   * - Since we use UpdateRegionDto (optional fields), it's more like PATCH
-   *
-   * Note: Could change to @Patch if you prefer semantic correctness
-   */
+  // PUT /admin/regions/:id - Update region (could be PATCH since using optional fields)
   @Put('regions/:id')
   async updateRegion(
     @Param('id', ParseIntPipe) id: number,
@@ -160,24 +102,14 @@ export class AdminController {
     return this.adminService.updateRegion(id, updateRegionDto);
   }
 
-  /**
-   * DELETE /admin/regions/:id
-   * Delete region
-   *
-   * Example Response:
-   * { "message": "Region with ID 1 deleted successfully" }
-   *
-   * Error if retailers exist:
-   * 400 Bad Request
-   * { "message": "Cannot delete region because it is referenced by existing retailers" }
-   */
+  // DELETE /admin/regions/:id - Delete region (fails if retailers reference it)
   @Delete('regions/:id')
   async removeRegion(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.removeRegion(id);
   }
 
   // ========================================
-  // AREAS ENDPOINTS (Same pattern as Regions)
+  // AREAS ENDPOINTS
   // ========================================
 
   @Get('areas')
@@ -209,7 +141,7 @@ export class AdminController {
   }
 
   // ========================================
-  // TERRITORIES ENDPOINTS (Same pattern)
+  // TERRITORIES ENDPOINTS
   // ========================================
 
   @Get('territories')
@@ -241,7 +173,7 @@ export class AdminController {
   }
 
   // ========================================
-  // DISTRIBUTORS ENDPOINTS (Same pattern)
+  // DISTRIBUTORS ENDPOINTS
   // ========================================
 
   @Get('distributors')
@@ -278,43 +210,15 @@ export class AdminController {
 
   /**
    * POST /admin/assignments/bulk
-   * Bulk assign retailers to sales reps
+   * Bulk assign retailers to sales reps in a single transaction
    *
-   * Example Request:
-   * POST /admin/assignments/bulk
-   * Content-Type: application/json
-   * {
-   *   "assignments": [
-   *     { "salesRepId": 2, "retailerIds": [1, 2, 3] },
-   *     { "salesRepId": 3, "retailerIds": [4, 5, 6, 7] }
-   *   ]
-   * }
-   *
-   * Example Response:
-   * {
-   *   "message": "Successfully created 7 retailer assignments",
-   *   "created": 7,
-   *   "total": 7,
-   *   "skipped": 0
-   * }
-   *
-   * If some assignments already exist:
-   * {
-   *   "message": "Successfully created 5 retailer assignments",
-   *   "created": 5,
-   *   "total": 7,
-   *   "skipped": 2  ← These assignments already existed
-   * }
-   *
-   * Why separate endpoint instead of POST /assignments?
-   * - Bulk operations are admin-only (SRs shouldn't assign retailers)
-   * - Groups all admin operations under /admin prefix
-   * - Clear intent: this is a bulk operation, not single assignment
+   * Skips existing assignments and returns summary with created/skipped counts
    */
   @Post('assignments/bulk')
   @ApiOperation({
     summary: 'Bulk assign retailers to sales reps',
-    description: 'Create multiple retailer-to-sales-rep assignments in one operation. Skips duplicates.',
+    description:
+      'Create multiple retailer-to-sales-rep assignments in one operation. Skips duplicates.',
   })
   @ApiResponse({
     status: 201,
@@ -328,8 +232,14 @@ export class AdminController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Validation error or invalid sales rep/retailer IDs' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Only admins can access' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error or invalid sales rep/retailer IDs',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only admins can access',
+  })
   async bulkAssignRetailers(@Body() bulkAssignmentDto: BulkAssignmentDto) {
     return this.adminService.bulkAssignRetailers(bulkAssignmentDto);
   }
@@ -340,54 +250,10 @@ export class AdminController {
 
   /**
    * POST /admin/retailers/import
-   * Import retailers from CSV file
+   * Import retailers from CSV file with validation and error reporting
    *
-   * What is @UseInterceptors(FileInterceptor('file'))?
-   * - FileInterceptor is from @nestjs/platform-express
-   * - It uses Multer under the hood to handle multipart/form-data
-   * - 'file' is the field name in the form data
-   * - Multer parses the uploaded file and makes it available via @UploadedFile()
-   *
-   * What is @UploadedFile()?
-   * - A decorator that extracts the uploaded file from the request
-   * - Returns an Express.Multer.File object with properties:
-   *   - buffer: Buffer (the file contents in memory)
-   *   - originalname: string (e.g., "retailers.csv")
-   *   - mimetype: string (e.g., "text/csv")
-   *   - size: number (file size in bytes)
-   *
-   * Example Request (using curl):
-   * curl -X POST http://localhost:3000/admin/retailers/import \
-   *   -H "Authorization: Bearer <jwt_token>" \
-   *   -F "file=@retailers.csv"
-   *
-   * Example Request (using Postman):
-   * 1. Select POST method
-   * 2. URL: http://localhost:3000/admin/retailers/import
-   * 3. Headers: Authorization: Bearer <jwt_token>
-   * 4. Body: form-data
-   * 5. Key: file (type: File)
-   * 6. Value: Select retailers.csv file
-   *
-   * Example Response (Success):
-   * {
-   *   "success": true,
-   *   "created": 95,
-   *   "failed": 5,
-   *   "errors": [
-   *     { "row": 3, "uid": "RET-001", "error": "Region ID 99 not found" },
-   *     { "row": 5, "uid": "RET-003", "error": "Missing required fields" }
-   *   ]
-   * }
-   *
-   * Example Response (No file uploaded):
-   * 400 Bad Request
-   * { "message": "No file uploaded" }
-   *
-   * Why validate file type?
-   * - Security: Prevent uploading of malicious files
-   * - Data integrity: Ensure we're processing correct format
-   * - Better error messages: Tell user immediately if wrong file type
+   * Uses FileInterceptor for multipart/form-data handling
+   * Validates file type, size (max 10MB), and processes with detailed error reporting
    */
   @Post('retailers/import')
   @UseInterceptors(FileInterceptor('file'))
@@ -400,7 +266,8 @@ export class AdminController {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'CSV file with columns: uid,name,phone,regionId,areaId,distributorId,territoryId,points,routes,notes',
+          description:
+            'CSV file with columns: uid,name,phone,regionId,areaId,distributorId,territoryId,points,routes,notes',
         },
       },
       required: ['file'],
@@ -408,7 +275,8 @@ export class AdminController {
   })
   @ApiOperation({
     summary: 'Import retailers from CSV file',
-    description: 'Bulk import retailers from CSV. Validates each row and reports errors. Max file size: 10MB.',
+    description:
+      'Bulk import retailers from CSV. Validates each row and reports errors. Max file size: 10MB.',
   })
   @ApiResponse({
     status: 201,
@@ -425,43 +293,27 @@ export class AdminController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'No file uploaded, invalid file type, or file too large (>10MB)' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Only admins can access' })
-  async importRetailers(
-    @UploadedFile() file: Express.Multer.File,
-  ): Promise<{
+  @ApiResponse({
+    status: 400,
+    description:
+      'No file uploaded, invalid file type, or file too large (>10MB)',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only admins can access',
+  })
+  async importRetailers(@UploadedFile() file: Express.Multer.File): Promise<{
     success: boolean;
     created: number;
     failed: number;
     errors: Array<{ row: number; uid: string; error: string }>;
   }> {
-    /**
-     * Validate file was uploaded
-     *
-     * Why this check?
-     * - If user forgets to attach file, file will be undefined
-     * - Better to return clear error than let it fail in service
-     */
+    // Validate file was uploaded
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
 
-    /**
-     * Validate file type
-     *
-     * Why check mimetype?
-     * - Ensures uploaded file is actually a CSV
-     * - Prevents users from uploading .exe, .jpg, etc.
-     *
-     * Why also check file extension?
-     * - Some systems don't set correct mimetype
-     * - Double-check using filename
-     *
-     * Accepted mimetypes:
-     * - text/csv (standard CSV)
-     * - application/vnd.ms-excel (Excel CSV)
-     * - text/plain (sometimes CSVs are sent as plain text)
-     */
+    // Validate file type (CSV only) - checks both mimetype and extension for security
     const validMimeTypes = [
       'text/csv',
       'application/vnd.ms-excel',
@@ -476,16 +328,7 @@ export class AdminController {
       );
     }
 
-    /**
-     * Validate file size
-     *
-     * Why limit file size?
-     * - Prevent memory exhaustion (very large files)
-     * - 10MB limit = ~200,000 rows (reasonable for manual imports)
-     * - For larger imports, use streaming or batch API
-     *
-     * 10MB in bytes: 10 * 1024 * 1024 = 10485760
-     */
+    // Validate file size (max 10MB to prevent memory exhaustion)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       throw new BadRequestException(
@@ -493,13 +336,7 @@ export class AdminController {
       );
     }
 
-    /**
-     * Call service to process CSV
-     *
-     * file.buffer contains the entire file contents in memory
-     * This is OK for files up to 10MB
-     * For larger files, we'd use streams
-     */
+    // Process CSV file buffer (in-memory processing for files up to 10MB)
     return this.adminService.importRetailersFromCsv(file.buffer);
   }
 }

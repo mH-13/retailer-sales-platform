@@ -2,38 +2,11 @@ import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 /**
- * RolesGuard: Checks if user has required role
+ * Role-based authorization guard
  *
- * What this guard does:
- * - Checks if user's role matches required role(s)
- * - Used after JwtAuthGuard (needs request.user to exist)
- * - Works with @Roles() decorator
- *
- * How it works:
- * 1. @Roles('ADMIN') decorator sets metadata on route
- * 2. This guard reads that metadata using Reflector
- * 3. Compares user's role with required roles
- * 4. If match: return true (allow access)
- * 5. If no match: return false (403 Forbidden)
- *
- * Usage example:
- * ```typescript
- * @Post('/admin/regions')
- * @UseGuards(JwtAuthGuard, RolesGuard)  // Order matters!
- * @Roles('ADMIN')  // Only admins allowed
- * async createRegion() {
- *   // Only ADMINs reach here
- * }
- * ```
- *
- * Guard execution order:
- * 1. JwtAuthGuard: Validates token, populates request.user
- * 2. RolesGuard: Checks request.user.role matches @Roles()
- *
- * Why Reflector?
- * - Reflector reads metadata set by decorators
- * - @Roles('ADMIN') sets metadata: { roles: ['ADMIN'] }
- * - This guard reads that metadata to check permissions
+ * Checks if authenticated user has required role(s) set by @Roles() decorator
+ * Uses Reflector to read metadata and compare with user.role
+ * Must be used after JwtAuthGuard (requires request.user)
  */
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -41,30 +14,20 @@ export class RolesGuard implements CanActivate {
 
   /**
    * Determine if user has required role
-   *
-   * @param context - Execution context (contains request, handler, etc.)
-   * @returns true if user has role, false otherwise
    */
   canActivate(context: ExecutionContext): boolean {
-    // Get required roles from @Roles() decorator
-    // 'roles' is the metadata key set by @Roles() decorator
     const requiredRoles = this.reflector.getAllAndOverride<string[]>('roles', [
-      context.getHandler(),  // Method level: @Roles() on specific route
-      context.getClass(),    // Class level: @Roles() on entire controller
+      context.getHandler(), // Method level
+      context.getClass(), // Class level
     ]);
 
-    // If no @Roles() decorator, allow access (no role restriction)
     if (!requiredRoles) {
-      return true;
+      return true; // No role restriction
     }
 
-    // Get user from request (populated by JwtAuthGuard)
     const request = context.switchToHttp().getRequest();
-    const user = request.user;
+    const user = request.user; // Populated by JwtAuthGuard
 
-    // Check if user exists and has one of the required roles
-    // Example: requiredRoles = ['ADMIN'], user.role = 'ADMIN' → true
-    // Example: requiredRoles = ['ADMIN'], user.role = 'SR' → false
     return requiredRoles.some((role) => user?.role === role);
   }
 }

@@ -7,55 +7,35 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 /**
- * AuthModule: Authentication module configuration
+ * Authentication module with JWT configuration
  *
- * What this module provides:
- * - Login endpoint (POST /auth/login)
- * - JWT token generation
- * - JWT token validation via JwtStrategy
- * - Passport integration for protected routes
- *
- * Module structure:
- * - imports: Other modules we depend on
- * - controllers: HTTP endpoints (AuthController)
- * - providers: Services and strategies (AuthService, JwtStrategy)
- * - exports: What we make available to other modules (JwtStrategy)
- *
- * Why export JwtStrategy?
- * - Other modules need it for @UseGuards(JwtAuthGuard)
- * - Guards use JwtStrategy to validate tokens
- *
- * JwtModule.registerAsync() explanation:
- * - registerAsync: Loads config asynchronously
- * - useFactory: Factory function to create JWT config
- * - inject: Dependencies needed by factory (ConfigService)
- * - This pattern allows us to use .env values
+ * Provides login endpoint, JWT generation/validation, and Passport integration
+ * Uses registerAsync to load JWT config from environment variables
  */
 @Module({
   imports: [
-    // PassportModule: Required for passport strategies
-    PassportModule,
+    PassportModule, // Required for passport strategies
 
-    // JwtModule: Configure JWT token generation
+    // JWT configuration with async environment loading
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        // Secret key for signing tokens (from .env)
-        secret: configService.get<string>('JWT_SECRET') || 'fallback-secret-key',
-
-        // Token expiration time (from .env, default 7 days)
+        secret:
+          configService.get<string>('JWT_SECRET') || 'fallback-secret-key',
+        // Token expiration (default 7 days)
         signOptions: {
-          expiresIn: (configService.get<string>('JWT_EXPIRES_IN') || '7d') as any,
+          expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ||
+            '7d') as any,
         },
       }),
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController], // POST /auth/login
+  controllers: [AuthController],
   providers: [
-    AuthService,   // Business logic
-    JwtStrategy,   // Token validation
+    AuthService, // Business logic
+    JwtStrategy, // Token validation
   ],
-  exports: [JwtStrategy], // Make strategy available for guards
+  exports: [JwtStrategy], // Available for guards
 })
 export class AuthModule {}

@@ -5,24 +5,10 @@ import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 
 /**
- * AuthService: Handles authentication business logic
+ * Authentication service
+ * Handles user login, password validation with bcrypt, and JWT token generation
  *
- * What this service does:
- * - Validates user credentials (username + password)
- * - Generates JWT tokens for valid users
- * - Handles password comparison using bcrypt
- *
- * Why bcrypt?
- * - Passwords are hashed in database (never store plain text!)
- * - bcrypt.compare() safely compares input with hash
- * - One-way function: can't reverse hash to get password
- *
- * JWT Token contains:
- * - sub (subject): user ID
- * - username: user's username
- * - role: 'ADMIN' or 'SR'
- * - iat (issued at): timestamp
- * - exp (expires): timestamp (7 days from .env)
+ * JWT Token contains: sub (user ID), username, role, iat, exp
  */
 @Injectable()
 export class AuthService {
@@ -34,13 +20,7 @@ export class AuthService {
   /**
    * Validate user credentials and return JWT token
    *
-   * Flow:
-   * 1. Find user by username
-   * 2. Check if user exists and is active
-   * 3. Compare password with hashed password
-   * 4. If valid, generate JWT token
-   * 5. Return token + user info
-   *
+   * Flow: Find user → Check active → Compare password → Generate token
    * @param loginDto - { username, password }
    * @returns { access_token, user: { id, username, name, role } }
    * @throws UnauthorizedException if credentials invalid
@@ -48,7 +28,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { username, password } = loginDto;
 
-    // Step 1: Find user in database
+    // Find user by username
     const user = await this.prisma.salesRep.findUnique({
       where: { username },
       select: {
@@ -61,27 +41,27 @@ export class AuthService {
       },
     });
 
-    // Step 2: Check if user exists
+    // Check if user exists
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Step 3: Check if user is active
+    // Check if user is active
     if (!user.isActive) {
       throw new UnauthorizedException('Account is deactivated');
     }
 
-    // Step 4: Compare password with hashed password
+    // Compare password with hashed password using bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Step 5: Generate JWT token
+    // Generate JWT token payload
     const payload = {
-      sub: user.id,         // Standard JWT claim (subject = user ID)
+      sub: user.id, // Standard JWT claim (subject = user ID)
       username: user.username,
-      role: user.role,      // 'ADMIN' or 'SR'
+      role: user.role, // 'ADMIN' or 'SR'
     };
 
     const access_token = this.jwtService.sign(payload);
@@ -101,15 +81,12 @@ export class AuthService {
   /**
    * Validate JWT payload (called by JWT Strategy)
    *
-   * This is called automatically when a protected route is accessed
-   * JWT Strategy decodes the token and passes payload here
-   *
+   * Called automatically when protected route is accessed
    * @param payload - Decoded JWT payload { sub, username, role }
    * @returns User info to attach to request object
    */
   async validateUser(payload: any) {
-    // Get fresh user data from database
-    // This ensures user still exists and is active
+    // Get fresh user data from database to ensure user still exists and is active
     const user = await this.prisma.salesRep.findUnique({
       where: { id: payload.sub },
       select: {

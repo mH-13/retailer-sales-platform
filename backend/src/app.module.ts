@@ -9,44 +9,21 @@ import { RetailersModule } from './retailers/retailers.module';
 import { AdminModule } from './admin/admin.module';
 
 /**
- * AppModule: Root module of the application
+ * Root application module
  *
- * What happens here:
- * - ConfigModule.forRoot(): Loads .env file variables (DATABASE_URL, JWT_SECRET, etc.)
- * - PrismaModule: Provides database access to entire app (@Global module)
- * - RedisModule: Provides caching to entire app (@Global module)
- * - AuthModule: Provides authentication endpoints and JWT validation
- * - RetailersModule: Provides retailer management endpoints
- * - AdminModule: Provides admin-only CRUD endpoints for reference data
- *
- * Why ConfigModule.forRoot({ isGlobal: true })?
- * - Makes environment variables available everywhere
- * - No need to import ConfigModule in every feature module
- *
- * Module loading order:
- * 1. ConfigModule (loads .env first)
- * 2. PrismaModule (needs DATABASE_URL from config)
- * 3. RedisModule (needs REDIS_HOST, REDIS_PORT from config)
- * 4. AuthModule (needs JWT_SECRET from config)
- * 5. RetailersModule (uses PrismaModule and RedisModule)
- * 6. AdminModule (uses PrismaModule, ADMIN-only endpoints)
+ * Imports global modules (Config, Prisma, Redis) and feature modules (Auth, Retailers, Admin)
+ * ConfigModule.forRoot() loads .env variables globally
  */
 @Module({
   imports: [
-    // Load environment variables from .env file
     ConfigModule.forRoot({
       isGlobal: true, // Makes ConfigService available everywhere
     }),
-    // Database connection (global module)
-    PrismaModule,
-    // Redis caching (global module)
-    RedisModule,
-    // Authentication (JWT)
-    AuthModule,
-    // Retailers management
-    RetailersModule,
-    // Admin management (CRUD for reference data)
-    AdminModule,
+    PrismaModule, // Database (global)
+    RedisModule, // Caching (global)
+    AuthModule, // Authentication
+    RetailersModule, // Retailer management
+    AdminModule, // Admin CRUD operations
   ],
   controllers: [AppController],
   providers: [AppService],

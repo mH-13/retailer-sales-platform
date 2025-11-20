@@ -1,27 +1,18 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { QueryRetailersDto } from './dto/query-retailers.dto';
 import { UpdateRetailerDto } from './dto/update-retailer.dto';
 
 /**
- * RetailersService: Business logic for retailer operations
+ * Retailers service - handles retailer operations with caching and authorization
  *
- * What this service does:
- * 1. List retailers (with pagination, search, filters, caching)
- * 2. Get single retailer details
- * 3. Update retailer (with authorization and cache invalidation)
- *
- * Key patterns used:
- * - Cache-aside pattern for performance
- * - Authorization checks (SR can only access assigned retailers)
- * - N+1 prevention with Prisma includes
- * - Offset pagination (simple and effective)
- *
- * Security rules:
- * - Admin can see all retailers
- * - SR can only see assigned retailers
- * - SR can only update assigned retailers
+ * Key patterns: Cache-aside, authorization checks, N+1 prevention, offset pagination
+ * Security: Admin sees all retailers, SR only sees assigned retailers
  */
 @Injectable()
 export class RetailersService {
@@ -31,25 +22,24 @@ export class RetailersService {
   ) {}
 
   /**
-   * List retailers for a user (SR or Admin)
+   * List retailers for a user with pagination, search, filters, and caching
    *
-   * Flow:
-   * 1. Build cache key based on user and query params
-   * 2. Try to get from cache (fast path)
-   * 3. If cache miss, query database
-   * 4. Apply filters (region, area, search, etc.)
-   * 5. Pagination (offset = (page-1) * limit)
-   * 6. Include relations to avoid N+1 queries
-   * 7. Cache result for 5 minutes
-   * 8. Return data with pagination metadata
-   *
+   * Flow: Build cache key → Try cache → Query DB → Apply filters → Cache result
    * @param userId - User ID from JWT token
    * @param userRole - User role ('ADMIN' or 'SR')
    * @param query - Query parameters (page, limit, search, filters)
-   * @returns Paginated list of retailers
+   * @returns Paginated list of retailers with metadata
    */
   async findAll(userId: number, userRole: string, query: QueryRetailersDto) {
-    const { page = 1, limit = 20, search, region, area, distributor, territory } = query;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      region,
+      area,
+      distributor,
+      territory,
+    } = query;
 
     // Calculate offset for pagination
     // page=1 → offset=0 (skip 0 items)
@@ -82,9 +72,9 @@ export class RetailersService {
     // Apply search filter (searches name, phone, UID)
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },      // Case-insensitive name search
-        { phone: { contains: search } },                           // Phone search
-        { uid: { contains: search, mode: 'insensitive' } },       // UID search
+        { name: { contains: search, mode: 'insensitive' } }, // Case-insensitive name search
+        { phone: { contains: search } }, // Phone search
+        { uid: { contains: search, mode: 'insensitive' } }, // UID search
       ];
     }
 
@@ -115,8 +105,8 @@ export class RetailersService {
           territory: true,
         },
         orderBy: [
-          { updatedAt: 'desc' },  // Most recently updated first
-          { id: 'asc' },          // Stable sort (same updatedAt uses id)
+          { updatedAt: 'desc' }, // Most recently updated first
+          { id: 'asc' }, // Stable sort (same updatedAt uses id)
         ],
       }),
     ]);
@@ -141,15 +131,9 @@ export class RetailersService {
   }
 
   /**
-   * Get single retailer by UID
+   * Get single retailer by UID with authorization check
    *
-   * Flow:
-   * 1. Try cache first
-   * 2. If cache miss, query database
-   * 3. Check authorization (SR can only see assigned retailers)
-   * 4. Cache result
-   * 5. Return retailer
-   *
+   * Flow: Try cache → Query DB → Check authorization → Cache result
    * @param uid - Retailer UID (e.g., 'RET-DHA-001')
    * @param userId - User ID from JWT
    * @param userRole - User role
@@ -210,14 +194,9 @@ export class RetailersService {
   }
 
   /**
-   * Update retailer (points, routes, notes only)
+   * Update retailer (points, routes, notes only) with cache invalidation
    *
-   * Flow:
-   * 1. Verify retailer exists and user has access
-   * 2. Update allowed fields only
-   * 3. Invalidate all related caches
-   * 4. Return updated retailer
-   *
+   * Flow: Verify access → Update fields → Invalidate caches → Return updated
    * @param uid - Retailer UID
    * @param userId - User ID from JWT
    * @param userRole - User role
@@ -254,9 +233,8 @@ export class RetailersService {
     // Pattern: retailers:user:123:* matches all list queries for user 123
     await this.redis.delPattern(`retailers:user:${userId}:*`);
 
-    // Note: This is simple but invalidates all pages
-    // Advanced: Track which pages have this retailer and invalidate only those
-    // Trade-off: Simplicity vs precision (we chose simplicity)
+    // Simple approach: invalidates all pages for this user
+    // Trade-off: Simplicity vs precision
 
     return updated;
   }

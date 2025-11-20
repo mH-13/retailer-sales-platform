@@ -2,50 +2,13 @@ import { IsNotEmpty, IsString, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 /**
- * CreateRegionDto
+ * Create region DTO with validation
  *
- * What is this?
- * - A Data Transfer Object (DTO) that validates incoming data when creating a region
- * - Ensures admins provide valid data before we touch the database
- *
- * Why do we need this?
- * - Prevents empty or invalid region names from being created
- * - Provides clear error messages to the client
- * - Security: Validates input before database operations
- *
- * Example valid request:
- * POST /admin/regions
- * { "name": "Sylhet" }  ✅
- *
- * Example invalid requests:
- * { "name": "" }        ❌ Empty string (fails @IsNotEmpty)
- * { "name": "AB" }      ❌ Too short (fails @MinLength(3))
- * { "name": 123 }       ❌ Not a string (fails @IsString)
- * { }                   ❌ Missing name (fails @IsNotEmpty)
+ * Validates region name: required, string, 3-100 characters
+ * Example: { "name": "Sylhet" }
  */
 export class CreateRegionDto {
-  /**
-   * Region name (required)
-   *
-   * Validation Rules:
-   * - @IsNotEmpty(): Cannot be empty string or null/undefined
-   * - @IsString(): Must be a string type
-   * - @MinLength(3): Minimum 3 characters (prevents "AB", "X")
-   * - @MaxLength(100): Maximum 100 characters (prevents abuse)
-   *
-   * Why these rules?
-   * - MinLength(3): Most region names are at least 3 chars ("Cox" is edge case)
-   * - MaxLength(100): Reasonable limit, prevents database overflow attacks
-   *
-   * Swagger @ApiProperty:
-   * - Shows example value in Swagger UI
-   * - Describes the field for API documentation
-   * - Makes it easy for users to test the API
-   *
-   * Interview Q: "What happens if validation fails?"
-   * A: "NestJS's ValidationPipe automatically returns 400 Bad Request with
-   *     detailed error messages showing which validations failed"
-   */
+  // Region name: 3-100 characters, prevents empty names and database overflow
   @ApiProperty({
     description: 'Region name (3-100 characters)',
     example: 'Rajshahi',

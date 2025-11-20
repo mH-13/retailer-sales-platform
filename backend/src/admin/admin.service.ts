@@ -18,23 +18,10 @@ import csvParser from 'csv-parser';
 import { Readable } from 'stream';
 
 /**
- * AdminService
+ * Admin service for reference data CRUD and bulk operations
  *
- * What does this service do?
- * - CRUD operations for reference data (regions, areas, territories, distributors)
- * - Bulk assignment of retailers to sales reps
- * - All operations are ADMIN-only (enforced at controller level)
- *
- * Why separate service from controller?
- * - Controller: HTTP concerns (routing, guards, decorators)
- * - Service: Business logic (database operations, validations)
- * - This allows testing business logic without HTTP layer
- * - Follows Single Responsibility Principle
- *
- * Pattern Used: Generic CRUD Methods
- * - Instead of writing findAllRegions, findAllAreas, findAllTerritories...
- * - We write ONE generic method that works for all entities
- * - Less code duplication, easier maintenance
+ * Handles: regions, areas, territories, distributors, bulk assignments, CSV import
+ * Pattern: Generic CRUD methods with duplicate checking and foreign key validation
  */
 @Injectable()
 export class AdminService {
@@ -45,17 +32,7 @@ export class AdminService {
   // ========================================
 
   /**
-   * Get all regions
-   *
-   * Why no pagination here?
-   * - Reference data is small (~10-20 regions max)
-   * - Front-end needs all regions for dropdown menus
-   * - Caching at client side makes this efficient
-   *
-   * Interview Q: "What if there were 10,000 regions?"
-   * A: "Then I'd add pagination similar to retailers endpoint.
-   *     But for reference data, keeping it simple is better since
-   *     these lists are typically small and rarely change."
+   * Get all regions (no pagination - reference data is small)
    */
   async findAllRegions() {
     return this.prisma.region.findMany({
@@ -65,28 +42,12 @@ export class AdminService {
 
   /**
    * Get single region by ID
-   *
-   * Why findUnique instead of findFirst?
-   * - findUnique: Optimized for unique fields (id, @@unique)
-   * - findFirst: Scans table until it finds first match
-   * - findUnique is faster and communicates intent better
    */
   async findOneRegion(id: number) {
     const region = await this.prisma.region.findUnique({
       where: { id },
     });
 
-    /**
-     * Why throw NotFoundException?
-     * - NestJS best practice for RESTful APIs
-     * - Automatically returns 404 HTTP status
-     * - Client gets clear error message
-     *
-     * What happens without this check?
-     * - Controller would return null
-     * - Client gets 200 OK with null body (confusing!)
-     * - Not RESTful (404 is correct status for missing resource)
-     */
     if (!region) {
       throw new NotFoundException(`Region with ID ${id} not found`);
     }
@@ -95,26 +56,10 @@ export class AdminService {
   }
 
   /**
-   * Create new region
-   *
-   * Why async/await?
-   * - Prisma returns Promises (database operations are asynchronous)
-   * - await waits for database to complete before continuing
-   * - Without await, we'd return a Promise instead of actual data
+   * Create new region with duplicate name check
    */
   async createRegion(createRegionDto: CreateRegionDto) {
-    /**
-     * Duplicate check
-     *
-     * Why check for duplicates?
-     * - Business rule: Region names should be unique
-     * - Better UX: Clear error message vs cryptic database error
-     * - Database has no unique constraint on name (we could add one)
-     *
-     * Why ConflictException?
-     * - Returns 409 HTTP status (standard for duplicates)
-     * - Different from 400 Bad Request (which is for validation errors)
-     */
+    // Check for duplicate region name
     const existing = await this.prisma.region.findFirst({
       where: { name: createRegionDto.name },
     });
@@ -131,19 +76,13 @@ export class AdminService {
   }
 
   /**
-   * Update existing region
-   *
-   * Pattern:
-   * 1. Check if exists (throw 404 if not)
-   * 2. Check for duplicate name (throw 409 if conflict)
-   * 3. Update in database
-   * 4. Return updated entity
+   * Update existing region with duplicate name check
    */
   async updateRegion(id: number, updateRegionDto: UpdateRegionDto) {
-    // Step 1: Verify exists
-    await this.findOneRegion(id); // Throws NotFoundException if not found
+    // Verify region exists
+    await this.findOneRegion(id);
 
-    // Step 2: Check for duplicate name (if name is being updated)
+    // Check for duplicate name (if name is being updated)
     if (updateRegionDto.name) {
       const existing = await this.prisma.region.findFirst({
         where: {
@@ -152,12 +91,6 @@ export class AdminService {
         },
       });
 
-      /**
-       * Why "NOT: { id }"?
-       * - Updating "Dhaka" to "Dhaka" should be allowed (no change)
-       * - Without NOT, it would find itself and throw conflict error
-       * - With NOT, it only finds OTHER regions with same name
-       */
       if (existing) {
         throw new ConflictException(
           `Region with name "${updateRegionDto.name}" already exists`,
@@ -165,7 +98,6 @@ export class AdminService {
       }
     }
 
-    // Step 3: Update
     return this.prisma.region.update({
       where: { id },
       data: updateRegionDto,
@@ -173,60 +105,31 @@ export class AdminService {
   }
 
   /**
-   * Delete region
-   *
-   * What happens to retailers in this region?
-   * - Database has foreign key: retailer.regionId → region.id
-   * - Default: CASCADE (deleting region deletes all retailers) ❌ DANGEROUS
-   * - Our schema: RESTRICT (prevents deletion if retailers exist) ✅ SAFE
-   *
-   * Interview Q: "What if admin really wants to delete a region with retailers?"
-   * A: "They'd need to first reassign all retailers to a different region,
-   *     then delete the empty region. This prevents accidental data loss.
-   *     For a 'force delete' feature, I'd add a confirmation step and
-   *     cascade delete in a transaction with audit logging."
+   * Delete region (fails if retailers reference it due to foreign key constraint)
    */
   async removeRegion(id: number) {
-    // Verify exists first
     await this.findOneRegion(id);
 
-    /**
-     * Try to delete
-     *
-     * What if retailers reference this region?
-     * - Prisma throws error: "Foreign key constraint failed"
-     * - We catch it and return better error message
-     */
+    // Try to delete - will fail if retailers reference this region
     try {
       await this.prisma.region.delete({
         where: { id },
       });
 
-      /**
-       * Why return message instead of deleted entity?
-       * - Deleted entity no longer exists (nothing to return)
-       * - Message confirms success
-       * - Standard pattern for DELETE endpoints
-       */
       return { message: `Region with ID ${id} deleted successfully` };
     } catch (error) {
-      /**
-       * Why catch database errors?
-       * - Database error messages are technical (not user-friendly)
-       * - "P2003: Foreign key constraint failed on the field: `regionId`"
-       * - Better: "Cannot delete region because it has associated retailers"
-       */
+      // Handle foreign key constraint error with user-friendly message
       if (error.code === 'P2003') {
         throw new BadRequestException(
           `Cannot delete region because it is referenced by existing retailers`,
         );
       }
-      throw error; // Re-throw unexpected errors
+      throw error;
     }
   }
 
   // ========================================
-  // AREAS CRUD (Same pattern as Regions)
+  // AREAS CRUD
   // ========================================
 
   async findAllAreas() {
@@ -244,15 +147,7 @@ export class AdminService {
   }
 
   async createArea(createAreaDto: CreateAreaDto) {
-    /**
-     * Duplicate check for Area
-     *
-     * Why check name + regionId?
-     * - Schema has: @@unique([name, regionId])
-     * - Same area name can exist in different regions
-     * - Example: "Downtown" area in both Dhaka and Chittagong (OK)
-     * - But can't have two "Downtown" areas in same region (NOT OK)
-     */
+    // Check for duplicate area name within same region (schema constraint: @@unique([name, regionId]))
     const existing = await this.prisma.area.findFirst({
       where: {
         name: createAreaDto.name,
@@ -274,16 +169,7 @@ export class AdminService {
   async updateArea(id: number, updateAreaDto: UpdateAreaDto) {
     const currentArea = await this.findOneArea(id);
 
-    /**
-     * Duplicate check for Area update
-     *
-     * Why check both name AND regionId?
-     * - If updating name: Check new name doesn't exist in SAME region
-     * - If updating regionId: Check current name doesn't exist in NEW region
-     * - If updating both: Check new name doesn't exist in new region
-     *
-     * Schema constraint: @@unique([name, regionId])
-     */
+    // Check for duplicate area name in target region (handles name/regionId updates)
     if (updateAreaDto.name || updateAreaDto.regionId) {
       const nameToCheck = updateAreaDto.name || currentArea.name;
       const regionIdToCheck = updateAreaDto.regionId || currentArea.regionId;
@@ -326,7 +212,7 @@ export class AdminService {
   }
 
   // ========================================
-  // TERRITORIES CRUD (Same pattern)
+  // TERRITORIES CRUD
   // ========================================
 
   async findAllTerritories() {
@@ -344,15 +230,7 @@ export class AdminService {
   }
 
   async createTerritory(createTerritoryDto: CreateTerritoryDto) {
-    /**
-     * Duplicate check for Territory
-     *
-     * Why check name + areaId?
-     * - Schema has: @@unique([name, areaId]) (line 73)
-     * - Same territory name can exist in different areas
-     * - Example: "Block A" in both Gulshan and Banani (OK)
-     * - But can't have two "Block A" territories in same area (NOT OK)
-     */
+    // Check for duplicate territory name within same area (schema constraint: @@unique([name, areaId]))
     const existing = await this.prisma.territory.findFirst({
       where: {
         name: createTerritoryDto.name,
@@ -374,19 +252,11 @@ export class AdminService {
   async updateTerritory(id: number, updateTerritoryDto: UpdateTerritoryDto) {
     const currentTerritory = await this.findOneTerritory(id);
 
-    /**
-     * Duplicate check for Territory update
-     *
-     * Why check both name AND areaId?
-     * - If updating name: Check new name doesn't exist in SAME area
-     * - If updating areaId: Check current name doesn't exist in NEW area
-     * - If updating both: Check new name doesn't exist in new area
-     *
-     * Schema constraint: @@unique([name, areaId])
-     */
+    // Check for duplicate territory name in target area (handles name/areaId updates)
     if (updateTerritoryDto.name || updateTerritoryDto.areaId) {
       const nameToCheck = updateTerritoryDto.name || currentTerritory.name;
-      const areaIdToCheck = updateTerritoryDto.areaId || currentTerritory.areaId;
+      const areaIdToCheck =
+        updateTerritoryDto.areaId || currentTerritory.areaId;
 
       const existing = await this.prisma.territory.findFirst({
         where: {
@@ -426,7 +296,7 @@ export class AdminService {
   }
 
   // ========================================
-  // DISTRIBUTORS CRUD (Same pattern)
+  // DISTRIBUTORS CRUD
   // ========================================
 
   async findAllDistributors() {
@@ -509,52 +379,24 @@ export class AdminService {
   // ========================================
 
   /**
-   * Bulk assign retailers to sales reps
+   * Bulk assign retailers to sales reps in a single transaction
    *
-   * What does this do?
-   * - Takes multiple SR → Retailers mappings
-   * - Creates all assignments in one database transaction
-   * - All succeed or all fail (atomicity)
-   *
-   * Example Input:
-   * {
-   *   "assignments": [
-   *     { "salesRepId": 2, "retailerIds": [1, 2, 3] },
-   *     { "salesRepId": 3, "retailerIds": [4, 5, 6] }
-   *   ]
-   * }
-   *
-   * Creates 6 rows in sales_rep_retailers table
+   * Takes SR → Retailers mappings and creates all assignments atomically
+   * Example: { assignments: [{ salesRepId: 2, retailerIds: [1,2,3] }] }
    */
   async bulkAssignRetailers(bulkAssignmentDto: BulkAssignmentDto) {
-    /**
-     * Step 1: Validate all Sales Reps exist
-     *
-     * Why validate first?
-     * - Better error messages (which SR is missing?)
-     * - Fail fast (don't start transaction if data is invalid)
-     * - Prevents partial failures
-     */
-    const salesRepIds = bulkAssignmentDto.assignments.map(
-      (a) => a.salesRepId,
-    );
-    const uniqueSalesRepIds = [...new Set(salesRepIds)]; // Remove duplicates
+    // Step 1: Validate all Sales Reps exist and have SR role
+    const salesRepIds = bulkAssignmentDto.assignments.map((a) => a.salesRepId);
+    const uniqueSalesRepIds = [...new Set(salesRepIds)];
 
     const salesReps = await this.prisma.salesRep.findMany({
       where: {
         id: { in: uniqueSalesRepIds },
-        role: 'SR', // Must be Sales Rep role
+        role: 'SR',
       },
     });
 
-    /**
-     * Check if all requested SRs exist
-     *
-     * Why this check?
-     * - User might send invalid SR IDs (typo, deleted user, etc.)
-     * - Database foreign key would catch it, but error is cryptic
-     * - This gives clear error: "Sales Rep IDs 99, 100 not found"
-     */
+    // Validate all requested SRs exist
     if (salesReps.length !== uniqueSalesRepIds.length) {
       const foundIds = salesReps.map((sr) => sr.id);
       const missingIds = uniqueSalesRepIds.filter(
@@ -565,11 +407,7 @@ export class AdminService {
       );
     }
 
-    /**
-     * Step 2: Validate all Retailers exist
-     *
-     * Same logic as SRs - validate before transaction
-     */
+    // Step 2: Validate all Retailers exist
     const allRetailerIds = bulkAssignmentDto.assignments.flatMap(
       (a) => a.retailerIds,
     );
@@ -589,19 +427,7 @@ export class AdminService {
       );
     }
 
-    /**
-     * Step 3: Build assignment records
-     *
-     * Transform:
-     * { salesRepId: 2, retailerIds: [1, 2, 3] }
-     *
-     * Into:
-     * [
-     *   { salesRepId: 2, retailerId: 1 },
-     *   { salesRepId: 2, retailerId: 2 },
-     *   { salesRepId: 2, retailerId: 3 }
-     * ]
-     */
+    // Step 3: Transform assignments into individual records
     const assignmentRecords: { salesRepId: number; retailerId: number }[] = [];
     for (const assignment of bulkAssignmentDto.assignments) {
       for (const retailerId of assignment.retailerIds) {
@@ -612,57 +438,16 @@ export class AdminService {
       }
     }
 
-    /**
-     * Step 4: Insert all assignments in a transaction
-     *
-     * What is a transaction?
-     * - A group of database operations that all succeed or all fail
-     * - If ANY operation fails, ALL changes are rolled back
-     * - Database returns to state before transaction started
-     *
-     * Why use transaction here?
-     * - Atomicity: Either all 100 assignments succeed or none do
-     * - Without transaction: 50 might succeed, 51st fails → partial data!
-     * - With transaction: All succeed together or database reverts all
-     *
-     * How does it work?
-     * 1. await prisma.$transaction() starts transaction
-     * 2. All operations inside use same database connection
-     * 3. If exception occurs, automatic ROLLBACK
-     * 4. If function completes, automatic COMMIT
-     *
-     * Interview Q: "When would you NOT use a transaction?"
-     * A: "For independent operations where partial success is acceptable.
-     *     For example, sending emails - if 5 out of 10 succeed, that's
-     *     better than all-or-nothing. But for data consistency like
-     *     financial transactions or assignments, atomicity is critical."
-     */
+    // Step 4: Insert all assignments in a transaction (all succeed or all fail)
     try {
       const result = await this.prisma.$transaction(async (tx) => {
-        /**
-         * Why skipDuplicates?
-         * - If assignment already exists (SR 2 → Retailer 1), skip it
-         * - Without this: throws error "Unique constraint violation"
-         * - With this: Silently ignores duplicates, continues
-         *
-         * Trade-off:
-         * - Pro: Idempotent (can call multiple times safely)
-         * - Con: Hides potential bugs (admin might not know it was duplicate)
-         *
-         * Alternative: Could return list of skipped duplicates in response
-         */
         return tx.salesRepRetailer.createMany({
           data: assignmentRecords,
-          skipDuplicates: true, // Ignore if assignment already exists
+          skipDuplicates: true, // Ignore existing assignments (idempotent)
         });
       });
 
-      /**
-       * Return summary
-       *
-       * result.count = number of NEW assignments created
-       * (doesn't count skipped duplicates)
-       */
+      // Return summary (result.count = new assignments, excludes skipped duplicates)
       return {
         message: `Successfully created ${result.count} retailer assignments`,
         created: result.count,
@@ -670,14 +455,7 @@ export class AdminService {
         skipped: assignmentRecords.length - result.count,
       };
     } catch (error) {
-      /**
-       * What errors can occur?
-       * - Database connection lost during transaction
-       * - Unique constraint (if skipDuplicates fails somehow)
-       * - Disk full, permissions, etc.
-       *
-       * All errors cause automatic ROLLBACK
-       */
+      // All errors cause automatic transaction rollback
       throw new BadRequestException(
         `Failed to create assignments: ${error.message}`,
       );
@@ -689,21 +467,11 @@ export class AdminService {
   // ========================================
 
   /**
-   * Import retailers from CSV file
+   * Import retailers from CSV file with validation and bulk insert
    *
-   * What does this do?
-   * - Accepts uploaded CSV file
-   * - Parses CSV rows into retailer objects
-   * - Validates each row (required fields, data types, foreign keys)
-   * - Bulk inserts valid retailers into database
-   * - Returns summary with success/error counts
-   *
-   * CSV Format Expected:
-   * uid,name,phone,regionId,areaId,distributorId,territoryId,points,routes,notes
-   * RET-001,Store Name,01711111111,1,2,3,4,100,"Route A","Good location"
-   *
-   * Required Fields: uid, name, phone
-   * Optional Fields: regionId, areaId, distributorId, territoryId, points, routes, notes
+   * Expected format: uid,name,phone,regionId,areaId,distributorId,territoryId,points,routes,notes
+   * Required fields: uid, name, phone
+   * Returns summary with success/error counts
    */
   async importRetailersFromCsv(fileBuffer: Buffer): Promise<{
     success: boolean;
@@ -711,126 +479,55 @@ export class AdminService {
     failed: number;
     errors: Array<{ row: number; uid: string; error: string }>;
   }> {
-    /**
-     * Step 1: Parse CSV file
-     *
-     * Why use streams?
-     * - Memory efficient (handles large files without loading all into RAM)
-     * - Processes rows one by one
-     * - Node.js Readable.from() converts Buffer → Stream
-     *
-     * How csv-parser works:
-     * - Reads CSV headers from first row
-     * - Converts each row into JavaScript object
-     * - Example: "uid,name,phone" → { uid: "RET-001", name: "Store", phone: "..." }
-     */
+    // Step 1: Parse CSV file using streams (memory efficient for large files)
     const rows: any[] = [];
     const stream = Readable.from(fileBuffer.toString());
 
-    /**
-     * Parse CSV using Promise wrapper
-     *
-     * Why Promise wrapper?
-     * - csv-parser is stream-based (async)
-     * - We need to wait for ALL rows to be parsed
-     * - Promise allows us to use async/await
-     */
+    // Parse CSV with Promise wrapper to handle async stream processing
     await new Promise<void>((resolve, reject) => {
       stream
         .pipe(csvParser())
         .on('data', (row: any) => {
-          /**
-           * 'data' event fires for each CSV row
-           * row = { uid: "RET-001", name: "Store", phone: "...", ... }
-           */
           rows.push(row);
         })
         .on('end', () => {
-          /**
-           * 'end' event fires when entire file is parsed
-           * All rows are now in rows[] array
-           */
           resolve();
         })
         .on('error', (error: any) => {
-          /**
-           * 'error' event fires if CSV is malformed
-           * Example: Invalid encoding, corrupted file
-           */
           reject(
             new BadRequestException(`CSV parsing error: ${error.message}`),
           );
         });
     });
 
-    /**
-     * Step 2: Validate and transform rows
-     *
-     * What we're doing:
-     * - Check each row has required fields (uid, name, phone)
-     * - Convert string numbers to actual numbers (regionId, points, etc.)
-     * - Handle empty/null values
-     * - Collect validation errors
-     */
+    // Step 2: Validate and transform rows
     const validRetailers: any[] = [];
     const errors: Array<{ row: number; uid: string; error: string }> = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const rowNumber = i + 2; // +2 because: row 1 is headers, row 2 is first data row
+      const rowNumber = i + 2; // +2 because row 1 is headers
 
-      /**
-       * Validate required fields
-       *
-       * Why these three?
-       * - Schema shows: uid, name, phone are NOT NULL
-       * - All other fields are nullable (Int?, String?)
-       */
+      // Validate required fields (uid, name, phone are NOT NULL in schema)
       if (!row.uid || !row.name || !row.phone) {
         errors.push({
           row: rowNumber,
           uid: row.uid || 'MISSING',
           error: 'Missing required fields: uid, name, or phone',
         });
-        continue; // Skip this row, move to next
+        continue;
       }
 
-      /**
-       * Convert and validate foreign keys
-       *
-       * Why parseInt?
-       * - CSV values are always strings: "1" not 1
-       * - Database expects numbers: regionId Int?
-       * - parseInt("1") → 1 (number)
-       * - parseInt("") → NaN (not a number)
-       * - parseInt(undefined) → NaN
-       *
-       * Why || null?
-       * - If field is empty/NaN, set to null (database accepts null for Int?)
-       */
+      // Convert string IDs to numbers (CSV values are strings, DB expects numbers)
       const regionId = parseInt(row.regionId) || null;
       const areaId = parseInt(row.areaId) || null;
       const distributorId = parseInt(row.distributorId) || null;
       const territoryId = parseInt(row.territoryId) || null;
-      const points = parseInt(row.points) || 0; // Default to 0 if not provided
+      const points = parseInt(row.points) || 0;
 
-      /**
-       * Build retailer object for database
-       *
-       * Structure matches Prisma schema:
-       * - uid: String (required)
-       * - name: String (required)
-       * - phone: String (required)
-       * - regionId: Int? (optional, null OK)
-       * - areaId: Int? (optional, null OK)
-       * - distributorId: Int? (optional, null OK)
-       * - territoryId: Int? (optional, null OK)
-       * - points: Int (defaults to 0)
-       * - routes: String? (optional, null OK)
-       * - notes: String? (optional, null OK)
-       */
+      // Build retailer object matching Prisma schema
       validRetailers.push({
-        uid: row.uid.trim(), // trim() removes whitespace
+        uid: row.uid.trim(),
         name: row.name.trim(),
         phone: row.phone.trim(),
         regionId,
@@ -843,53 +540,31 @@ export class AdminService {
       });
     }
 
-    /**
-     * Step 3: Validate foreign keys exist (if provided)
-     *
-     * Why validate?
-     * - Database foreign key constraints will fail if IDs don't exist
-     * - Better to give clear error message BEFORE database operation
-     * - Batch validation (check all IDs in one query per table)
-     */
+    // Step 3: Validate foreign keys exist (batch validation for better performance)
 
-    // Collect all unique IDs that were provided (not null)
+    // Collect all unique foreign key IDs that were provided
     const regionIds = [
       ...new Set(
-        validRetailers
-          .map((r) => r.regionId)
-          .filter((id) => id !== null),
+        validRetailers.map((r) => r.regionId).filter((id) => id !== null),
       ),
     ];
     const areaIds = [
       ...new Set(
-        validRetailers
-          .map((r) => r.areaId)
-          .filter((id) => id !== null),
+        validRetailers.map((r) => r.areaId).filter((id) => id !== null),
       ),
     ];
     const distributorIds = [
       ...new Set(
-        validRetailers
-          .map((r) => r.distributorId)
-          .filter((id) => id !== null),
+        validRetailers.map((r) => r.distributorId).filter((id) => id !== null),
       ),
     ];
     const territoryIds = [
       ...new Set(
-        validRetailers
-          .map((r) => r.territoryId)
-          .filter((id) => id !== null),
+        validRetailers.map((r) => r.territoryId).filter((id) => id !== null),
       ),
     ];
 
-    /**
-     * Batch validate foreign keys
-     *
-     * Why parallel queries?
-     * - All 4 queries are independent
-     * - Promise.all runs them simultaneously
-     * - Faster than sequential (4 queries in parallel vs 4 in series)
-     */
+    // Batch validate foreign keys with parallel queries
     try {
       const [regions, areas, distributors, territories] = await Promise.all([
         regionIds.length > 0
@@ -912,13 +587,7 @@ export class AdminService {
           : [],
       ]);
 
-      /**
-       * Check for missing foreign keys
-       *
-       * Logic:
-       * - foundIds = IDs that exist in database
-       * - missingIds = IDs in CSV but NOT in database
-       */
+      // Check for missing foreign keys
       const foundRegionIds = regions.map((r) => r.id);
       const foundAreaIds = areas.map((a) => a.id);
       const foundDistributorIds = distributors.map((d) => d.id);
@@ -927,9 +596,7 @@ export class AdminService {
       const missingRegionIds = regionIds.filter(
         (id) => !foundRegionIds.includes(id),
       );
-      const missingAreaIds = areaIds.filter(
-        (id) => !foundAreaIds.includes(id),
-      );
+      const missingAreaIds = areaIds.filter((id) => !foundAreaIds.includes(id));
       const missingDistributorIds = distributorIds.filter(
         (id) => !foundDistributorIds.includes(id),
       );
@@ -937,23 +604,15 @@ export class AdminService {
         (id) => !foundTerritoryIds.includes(id),
       );
 
-      /**
-       * Add errors for retailers with invalid foreign keys
-       *
-       * For each retailer, check if it uses a missing ID
-       * If yes, add to errors array and remove from validRetailers
-       */
+      // Add errors for retailers with invalid foreign keys and remove from valid list
       validRetailers.forEach((retailer, index) => {
-        if (
-          retailer.regionId &&
-          missingRegionIds.includes(retailer.regionId)
-        ) {
+        if (retailer.regionId && missingRegionIds.includes(retailer.regionId)) {
           errors.push({
             row: index + 2,
             uid: retailer.uid,
             error: `Region ID ${retailer.regionId} not found`,
           });
-          validRetailers.splice(index, 1); // Remove from valid list
+          validRetailers.splice(index, 1);
         }
         if (retailer.areaId && missingAreaIds.includes(retailer.areaId)) {
           errors.push({
@@ -992,24 +651,7 @@ export class AdminService {
       );
     }
 
-    /**
-     * Step 4: Bulk insert valid retailers
-     *
-     * Why transaction?
-     * - All retailers succeed or all fail (atomicity)
-     * - If one fails (e.g., duplicate UID), entire import rolls back
-     * - Database returns to state before import
-     *
-     * Why skipDuplicates?
-     * - uid is UNIQUE in schema
-     * - If UID already exists, skip that record
-     * - Continue inserting other valid records
-     *
-     * Trade-off decision:
-     * - WITHOUT skipDuplicates: One duplicate fails entire import
-     * - WITH skipDuplicates: Duplicates are silently skipped
-     * - We chose skipDuplicates for better UX (partial success OK)
-     */
+    // Step 4: Bulk insert valid retailers with transaction and duplicate handling
     let createdCount = 0;
 
     if (validRetailers.length > 0) {
@@ -1017,18 +659,13 @@ export class AdminService {
         const result = await this.prisma.$transaction(async (tx) => {
           return tx.retailer.createMany({
             data: validRetailers,
-            skipDuplicates: true, // Skip if UID already exists
+            skipDuplicates: true, // Skip existing UIDs for better UX
           });
         });
 
-        createdCount = result.count; // Number of records actually inserted
+        createdCount = result.count;
 
-        /**
-         * Track skipped duplicates
-         *
-         * If validRetailers.length = 100 but result.count = 95
-         * → 5 retailers were skipped (duplicate UIDs)
-         */
+        // Track skipped duplicates
         const skippedCount = validRetailers.length - result.count;
         if (skippedCount > 0) {
           // Add info about skipped duplicates
@@ -1039,32 +676,14 @@ export class AdminService {
           });
         }
       } catch (error) {
-        /**
-         * What errors can occur here?
-         * - Database connection lost
-         * - Validation constraint failed (shouldn't happen, we pre-validated)
-         * - Transaction timeout
-         */
+        // Handle database errors during import
         throw new BadRequestException(
           `Failed to import retailers: ${error.message}`,
         );
       }
     }
 
-    /**
-     * Step 5: Return summary
-     *
-     * Response format:
-     * {
-     *   "success": true,
-     *   "created": 95,
-     *   "failed": 5,
-     *   "errors": [
-     *     { "row": 3, "uid": "RET-001", "error": "Region ID 99 not found" },
-     *     { "row": 7, "uid": "RET-005", "error": "Missing required fields" }
-     *   ]
-     * }
-     */
+    // Step 5: Return summary with success/error counts
     return {
       success: createdCount > 0,
       created: createdCount,

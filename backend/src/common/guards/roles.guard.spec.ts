@@ -51,7 +51,9 @@ describe('RolesGuard', () => {
 
   it('should allow access when user has one of multiple required roles', () => {
     // @Roles('ADMIN', 'MANAGER') decorator
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['ADMIN', 'MANAGER']);
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockReturnValue(['ADMIN', 'MANAGER']);
 
     // User is ADMIN (one of the required roles)
     const mockContext = createMockContext({ role: 'ADMIN' });
