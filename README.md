@@ -1,10 +1,23 @@
 # Retailer Sales Platform - Backend Assignment
 
-> Production-ready backend system for managing field sales operations across Bangladesh, serving 1M+ retailers through Sales Representatives.
+> Backend API for Sales Representatives to manage their assigned retailers in Bangladesh. Built with NestJS, PostgreSQL, and Redis.
+
+## Table of Contents
+- [Assignment Compliance](#assignment-compliance)
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+- [API Reference](#api-reference)
+- [Architecture](#architecture)
+- [Testing](#testing)
+- [Scaling Strategy](#scaling-strategy)
+- [Features](#features)
+- [Deliverables Checklist](#deliverables-checklist)
 
 ## Assignment Compliance
 
 **Task**: Backend for Retailer Sales Representative App
+
 **Status**: ✅ **ALL REQUIREMENTS MET**
 
 - ✅ JWT Authentication (Admin + SR roles)
@@ -27,11 +40,10 @@
 This backend API enables Sales Representatives (SRs) to manage their assigned retailers (~70 each) from a nationwide pool of 1 million retailers. Admins can perform bulk operations, CSV imports, and territory management.
 
 **Tech Stack**: NestJS 11, PostgreSQL 15, Prisma 6, Redis 7, Docker
-**Database**: 7 tables with strategic indexing
-**Performance**: ~2ms response time with Redis caching, ~50ms without cache
+**Database**: 7 tables with indexes on foreign keys and search fields
+**Caching**: Redis with 5-minute TTL for frequently accessed data
 **Testing**: 21 unit tests passing across 5 test suites
 
----
 
 ## Quick Start
 
@@ -94,7 +106,6 @@ npm run start:dev
 | `fatima_sr` | `password123` | SR | 70 retailers |
 | `john_sr` | `password123` | SR | 70 retailers |
 
----
 
 ## Usage
 
@@ -128,7 +139,6 @@ curl -X POST http://localhost:3000/admin/retailers/import \
   -F "file=@sample-import.csv"
 ```
 
----
 
 ## API Reference
 
@@ -163,7 +173,6 @@ curl -X POST http://localhost:3000/admin/retailers/import \
 | `POST` | `/admin/assignments/bulk` | Bulk assign retailers to SRs |
 | `POST` | `/admin/retailers/import` | Import retailers from CSV |
 
----
 
 ## Architecture
 
@@ -205,8 +214,6 @@ PostgreSQL  Redis
 - Search fields: `uid` (unique), `name`, `phone`
 - Composite: `(salesRepId, retailerId)` for assignments
 
----
-
 ## Testing
 
 ```bash
@@ -229,41 +236,49 @@ npm run test:cov
 
 **Total: 21 tests across 5 suites** (all passing)
 
----
 
 ## Scaling Strategy
 
-### Current Architecture & Design Philosophy
+### What I Built & Why
 
-The system is built with **simplicity and maintainability as first principles**, suitable for ~15,000 Sales Representatives managing 1 million retailers. The architecture prioritizes clean, understandable code over premature optimization, enabling any developer to quickly grasp the system and make changes confidently. Current capacity handles ~1,000 concurrent users with sub-200ms response times.
+I'm relatively new to backend development, so I focused on building something that works well and is easy to understand, rather than over-engineering. The current system handles ~15,000 Sales Reps managing 1 million retailers, which should work fine for the stated requirements.
 
-**Key Design Decisions:**
+**Some decisions I made while learning:**
 
-**Offset Pagination** - Simple `page` and `limit` parameters are intuitive and perfect for SRs viewing ~70 retailers (max 4 pages). More complex cursor-based pagination would add unnecessary complexity for this use case while providing no real benefit.
+**Pagination** - I went with offset pagination (`page` and `limit`). I read about cursor-based pagination which is supposedly faster for large datasets, but honestly, each SR only sees ~70 retailers (like 3-4 pages max). Offset pagination is way simpler to implement and understand. If we had thousands of pages, I'd reconsider.
 
-**Manual Cache-Aside Pattern** - Explicit `redis.get()` and `redis.set()` calls provide full visibility into caching behavior. Unlike decorator-based "magic" caching, this approach makes it immediately clear what's cached, when, and why. When debugging performance issues, developers can trace the exact cache flow without hunting through framework abstractions.
+**Caching** - I used manual `redis.get()` and `redis.set()` calls instead of fancy caching decorators. Yeah, it's more code, but I can actually SEE what's being cached and when. Made debugging much easier while learning. I set 5-minute TTL because that felt reasonable - data doesn't change that often.
 
-**Single Admin Controller** - All admin CRUD endpoints live in one controller since they share identical authentication (`@Roles('ADMIN')`) and follow the same patterns. This reduces file-switching and makes the codebase easier to navigate for new developers.
+**CSV Import** - I initially looked at PapaParse but ended up using the `csv-parser` library because it's simpler and does the job. For bulk inserts, I stuck with Prisma's `createMany()` wrapped in transactions. I know PostgreSQL's `COPY` command is much faster, but that requires raw SQL and I wanted to keep things consistent with Prisma. If we ever need to import 100K+ rows regularly, I'd switch to COPY.
 
-**Prisma ORM** - While raw SQL queries are marginally faster, Prisma's type-safe API and automatic migrations prevent entire classes of bugs (SQL injection, schema drift, type mismatches). The developer experience gain far outweighs the minor performance trade-off at current scale.
+**Database** - I used Prisma ORM throughout. Prisma prevents so many bugs (like SQL injection, typos, schema mismatches). Plus the auto-generated types are really helpful. I added indexes on all the foreign keys and the fields people search by (name, phone, uid).
 
-### Scaling to 100K+ Concurrent Users
+### How This Could Scale
 
-The architecture is designed to scale horizontally and vertically without major rewrites:
+I tried to make choices that won't completely break if the system needs to grow:
 
-**Application Layer** - Deploy multiple NestJS instances behind a load balancer (Nginx/AWS ALB). The stateless JWT architecture ensures any instance can handle any request. Add PgBouncer connection pooling to scale from ~100 connections to 10,000+ without database strain. Implement rate limiting (100 req/min per user) to prevent abuse.
+**More users (10K → 100K concurrent):**
+- The app is stateless (JWT tokens, no sessions), so we can just run multiple instances behind a load balancer
+- Might need to add connection pooling (PgBouncer) so we don't run out of database connections
+- Redis is already there for caching the most common queries
 
-**Database Layer** - Add PostgreSQL read replicas for the 90% of traffic that consists of SR read queries. Write operations (updates, assignments) continue using the primary database. If the retailers table exceeds 10M rows, implement table partitioning by region. The current indexing strategy already supports efficient partition pruning. Upgrade to cursor-based pagination for admin views that browse all retailers - the `(updatedAt, id)` composite index is already in place.
+**More data (1M → 10M retailers):**
+- The indexes I added should still work
+- Might need to partition the retailers table by region if queries get slow
+- Could switch to cursor-based pagination for admin views (the index structure supports it)
 
-**Caching Layer** - Deploy Redis in cluster mode with automatic failover for high availability. Current cache keys are designed for distributed caching from day one. Increase TTL for reference data (regions, areas) from 5 minutes to 1 hour since this data rarely changes. Implement cache warming to preload frequently accessed data on startup.
+**Faster imports:**
+- Current CSV import handles 10K rows in ~2 seconds, which is fine for now
+- If we need to import 100K+ rows, I'd switch to PostgreSQL's COPY command (apparently 10-50x faster)
+- Could also move it to a background job queue so it doesn't block the API
 
-**Performance Optimizations** - Replace Prisma's `createMany()` with PostgreSQL's native `COPY` for CSV imports exceeding 100K rows (10-50x faster). Move CSV import to background jobs (Bull/BullMQ) to handle large files without request timeouts. The current synchronous approach is simpler and works for expected file sizes (10K rows in ~2 seconds).
+**Better reliability:**
+- Add read replicas for PostgreSQL - most queries are reads anyway (SRs viewing retailers)
+- Use Redis Cluster instead of single Redis instance
+- Add monitoring to catch slow queries before they become problems
 
-**Observability** - Add APM tools (New Relic, DataDog) to identify slow queries and bottlenecks. Implement Prometheus metrics with Grafana dashboards for real-time monitoring of latency, cache hit rates, and connection pool usage. Set up alerts for degraded performance (95th percentile > 500ms) to catch issues proactively.
+I saw there are fancier patterns (microservices, event sourcing, etc.) but for this assignment, I wanted to build something clean and functional that actually works, rather than something over-complicated that I don't fully understand. Everything I used here, I can explain and debug confidently.
 
-**The key principle**: _"Optimize when needed, not before."_ The current implementation prioritizes code clarity and maintainability with a clear path to scale when data or traffic demands it. Every architectural decision documents both the current simple approach and future optimization strategy, demonstrating awareness of scaling techniques without premature complexity.
-
----
 
 ## Features
 
@@ -290,7 +305,6 @@ The architecture is designed to scale horizontally and vertically without major 
 - **No N+1 Queries** - Prisma includes for relations
 - **Swagger Documentation** for easy API testing
 
----
 
 ## Deliverables Checklist
 
@@ -303,8 +317,6 @@ The architecture is designed to scale horizontally and vertically without major 
 - ✅ **Docker** - Dockerfile + docker-compose for easy setup
 - ✅ **Scaling approach** - Comprehensive strategy for 100K+ users
 
----
 
-**Created for**: Backend Engineer Take-Home Assignment
-**Status**: ✅ Production Ready - All Requirements Met
-**Last Updated**: November 2025
+
+**Status**: Production Ready - All Requirements Met
