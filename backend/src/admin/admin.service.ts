@@ -134,6 +134,9 @@ export class AdminService {
 
   async findAllAreas() {
     return this.prisma.area.findMany({
+      include: {
+        region: true, // Include related region data
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -217,6 +220,13 @@ export class AdminService {
 
   async findAllTerritories() {
     return this.prisma.territory.findMany({
+      include: {
+        area: {
+          include: {
+            region: true, // Include region through area
+          },
+        },
+      },
       orderBy: { name: 'asc' },
     });
   }
