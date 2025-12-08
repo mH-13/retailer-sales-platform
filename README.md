@@ -1,10 +1,10 @@
-# Retailer Sales Platform - Backend Assignment
+# Retailer Sales Platform
 
-> Backend API for Sales Representatives to manage their assigned retailers in Bangladesh. Built with NestJS, PostgreSQL, and Redis.
+> Full-stack platform for Sales Representatives to manage their assigned retailers. Built with NestJS, PostgreSQL, Redis, React, and TypeScript.
 
 ## Table of Contents
-- [Assignment Compliance](#assignment-compliance)
 - [Overview](#overview)
+- [Project Structure](#project-structure)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
 - [API Reference](#api-reference)
@@ -12,37 +12,30 @@
 - [Testing](#testing)
 - [Scaling Strategy](#scaling-strategy)
 - [Features](#features)
-- [Deliverables Checklist](#deliverables-checklist)
-
-## Assignment Compliance
-
-**Task**: Backend for Retailer Sales Representative App
-
-**Status**: ✅ **ALL REQUIREMENTS MET**
-
-- ✅ JWT Authentication (Admin + SR roles)
-- ✅ Retailer listing with pagination (70 per SR)
-- ✅ Search & filter by name/phone/UID, region/area/distributor/territory
-- ✅ SR can update Points, Routes, Notes
-- ✅ Admin CRUD for all reference data (regions, areas, territories, distributors)
-- ✅ Bulk CSV import (tested with 10K+ rows)
-- ✅ Bulk retailer assignment to SRs
-- ✅ All required APIs implemented and tested
-- ✅ 21 unit tests (exceeds minimum 5)
-- ✅ Swagger documentation at `/api`
-- ✅ Docker + docker-compose setup
-- ✅ Redis caching for performance
-- ✅ Proper indexing and no N+1 queries
-- ✅ Secure queries with Prisma ORM
 
 ## Overview
 
-This backend API enables Sales Representatives (SRs) to manage their assigned retailers (~70 each) from a nationwide pool of 1 million retailers. Admins can perform bulk operations, CSV imports, and territory management.
+Full-stack web platform enabling Sales Representatives (SRs) to manage their assigned retailers (~70 each) from a nationwide pool of 1 million retailers. Admins can perform bulk operations, CSV imports, and territory management.
 
-**Tech Stack**: NestJS 11, PostgreSQL 15, Prisma 6, Redis 7, Docker
-**Database**: 7 tables with indexes on foreign keys and search fields
-**Caching**: Redis with 5-minute TTL for frequently accessed data
+**Backend**: NestJS 11, PostgreSQL 15, Prisma 6, Redis 7, Docker  
+**Frontend**: React 19, TypeScript, Material-UI 7, TanStack Query, Zustand  
+**Database**: 7 tables with strategic indexes on foreign keys and search fields  
+**Caching**: Redis with 5-minute TTL for frequently accessed data  
 **Testing**: 21 unit tests passing across 5 test suites
+
+## Project Structure
+
+```
+retailer-sales-platform/
+├── backend/          # NestJS API (see backend/README.md)
+│   ├── src/          # Source code
+│   ├── prisma/       # Database schema & migrations
+│   └── test/         # Unit tests
+├── frontend/         # React web app (see frontend/README.md)
+│   ├── src/          # Source code
+│   └── public/       # Static assets
+└── docs/             # Documentation
+```
 
 
 ## Quick Start
@@ -54,13 +47,44 @@ This backend API enables Sales Representatives (SRs) to manage their assigned re
 
 ### Setup Instructions
 
-**1. Clone and navigate**
+**1. Clone repository**
 ```bash
 git clone <repository-url>
-cd retailer-sales-platform/backend
+cd retailer-sales-platform
 ```
 
-**2. Create environment file**
+**2. Start backend** (see [backend/README.md](backend/README.md) for details)
+```bash
+cd backend
+cp .env.example .env
+docker-compose up -d
+npm install
+npx prisma migrate deploy
+npx prisma db seed
+npm run start:dev
+```
+
+**3. Start frontend** (see [frontend/README.md](frontend/README.md) for details)
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+**4. Access**
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:3000
+- **Swagger UI**: http://localhost:3000/api
+
+### Backend Setup (Detailed)
+
+**1. Navigate to backend**
+```bash
+cd backend
+```
+
+**2. Create environment file** (or copy from .env.example)
 ```bash
 cat > .env << 'EOF'
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/retailer_db?schema=public"
@@ -92,7 +116,7 @@ npx prisma db seed
 npm run start:dev
 ```
 
-**7. Access**
+**7. Verify backend is running**
 - **API**: http://localhost:3000
 - **Swagger UI**: http://localhost:3000/api
 - **Prisma Studio**: `npx prisma studio` → http://localhost:5555
@@ -287,36 +311,35 @@ I saw there are fancier patterns (microservices, event sourcing, etc.) but for t
 - Search by name, phone, or UID
 - Filter by region, area, distributor, territory
 - Update retailer information (points, routes, notes only)
-- Fast queries optimized for mobile networks
+- Responsive web interface with Material-UI
 
 ### For Admins
 - CRUD operations for all reference data
 - Bulk CSV import (handles 10K+ rows efficiently)
 - Bulk retailer assignment to SRs (transaction-safe)
-- Cascade protection prevents accidental data deletion
+- Full system access and management
 
 ### Technical Highlights
-- **JWT Authentication** with role-based access control
-- **Redis Caching** with 5-minute TTL
-- **Database Indexing** on all foreign keys and search fields
-- **Data Isolation** - SRs only see assigned retailers
-- **Transaction-based Bulk Operations** for consistency
-- **DTO Validation** on all inputs
-- **No N+1 Queries** - Prisma includes for relations
-- **Swagger Documentation** for easy API testing
 
+**Backend:**
+- JWT Authentication with role-based access control
+- Redis caching with 5-minute TTL
+- Database indexing on all foreign keys and search fields
+- Data isolation - SRs only see assigned retailers
+- Transaction-based bulk operations for consistency
+- DTO validation on all inputs
+- No N+1 queries - Prisma includes for relations
+- Swagger documentation for easy API testing
 
-## Deliverables Checklist
+**Frontend:**
+- Modern React 19 with TypeScript
+- Material-UI components for professional design
+- TanStack Query for server state management
+- Zustand for client state (auth)
+- Protected routes with automatic redirects
+- Optimistic UI updates with rollback on error
+- Session persistence with localStorage
 
-- ✅ **Source code** - Complete NestJS backend implementation
-- ✅ **Migrations** - Prisma migrations for all 7 tables
-- ✅ **Seeds** - 210 retailers + 4 users with proper relationships
-- ✅ **README** - Setup instructions, usage guide, complete API list
-- ✅ **Swagger** - Interactive API documentation at `/api`
-- ✅ **Tests** - 21 unit tests across 5 test suites (exceeds minimum 5)
-- ✅ **Docker** - Dockerfile + docker-compose for easy setup
-- ✅ **Scaling approach** - Comprehensive strategy for 100K+ users
+---
 
-
-
-**Status**: Production Ready - All Requirements Met
+**Status**: Production Ready - Full-Stack Platform
