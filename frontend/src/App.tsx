@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import RetailersPage from './pages/RetailersPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 /**
@@ -10,6 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute';
  * Defines all application routes:
  * - /login - Public login page
  * - /dashboard - Protected dashboard (requires auth)
+ * - /retailers - Protected retailers list (requires auth)
  * - / - Redirects to dashboard if logged in, otherwise to login
  */
 function App() {
@@ -27,6 +29,15 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/retailers"
+          element={
+            <ProtectedRoute>
+              <RetailersPage />
             </ProtectedRoute>
           }
         />
