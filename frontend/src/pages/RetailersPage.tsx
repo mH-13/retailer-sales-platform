@@ -23,7 +23,9 @@ import {
   FilterList as FilterIcon,
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
+import EditRetailerDialog from '../components/EditRetailerDialog';
 import { useRetailers } from '../hooks/useRetailers';
+import type { Retailer } from '../types';
 
 /**
  * Retailers Page
@@ -38,6 +40,8 @@ export default function RetailersPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
 
   // Fetch retailers with current filters
   const { data, isLoading, error } = useRetailers({
@@ -66,6 +70,16 @@ export default function RetailersPage() {
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(event.target.value);
     setPage(0); // Reset to first page when searching
+  };
+
+  const handleEditClick = (retailer: Retailer) => {
+    setSelectedRetailer(retailer);
+    setEditDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setEditDialogOpen(false);
+    setSelectedRetailer(null);
   };
 
   return (
@@ -186,7 +200,11 @@ export default function RetailersPage() {
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <IconButton size="small" color="primary">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleEditClick(retailer)}
+                        >
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
@@ -210,6 +228,13 @@ export default function RetailersPage() {
             />
           )}
         </Paper>
+
+        {/* Edit Retailer Dialog */}
+        <EditRetailerDialog
+          open={editDialogOpen}
+          retailer={selectedRetailer}
+          onClose={handleCloseDialog}
+        />
       </Box>
     </Layout>
   );

@@ -37,7 +37,8 @@ function AppWrapper() {
 
   useEffect(() => {
     initializeAuth();
-  }, [initializeAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return <App />;
 }

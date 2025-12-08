@@ -21,6 +21,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
 
   // Actions
   setAuth: (user: User, token: string) => void;
@@ -33,6 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
   isAuthenticated: false,
+  isInitialized: false,
 
   /**
    * Set user and token after login
@@ -83,12 +85,16 @@ export const useAuthStore = create<AuthState>((set) => ({
           user,
           token,
           isAuthenticated: true,
+          isInitialized: true,
         });
       } catch (error) {
         // Invalid JSON in localStorage, clear it
         localStorage.removeItem('user');
         localStorage.removeItem('access_token');
+        set({ isInitialized: true });
       }
+    } else {
+      set({ isInitialized: true });
     }
   },
 }));
