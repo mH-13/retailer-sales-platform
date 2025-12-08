@@ -4,6 +4,8 @@ import { useAuthStore } from './store/authStore';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import RetailersPage from './pages/RetailersPage';
+import AdminPage from './pages/AdminPage';
+import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 /**
@@ -13,6 +15,8 @@ import ProtectedRoute from './components/ProtectedRoute';
  * - /login - Public login page
  * - /dashboard - Protected dashboard (requires auth)
  * - /retailers - Protected retailers list (requires auth)
+ * - /admin - Protected admin reference data page (requires auth + ADMIN role)
+ * - /settings - Protected settings page (requires auth)
  * - / - Redirects to dashboard if logged in, otherwise to login
  */
 function App() {
@@ -56,6 +60,24 @@ function App() {
           element={
             <ProtectedRoute>
               <RetailersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />

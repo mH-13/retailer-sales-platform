@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { Store as StoreIcon } from '@mui/icons-material';
 import { useLogin } from '../hooks/useAuth';
+import { useAuthStore } from '../store/authStore';
 
 /**
  * Login Page
@@ -24,11 +25,24 @@ import { useLogin } from '../hooks/useAuth';
  * - Loading state during login
  * - Error message display
  * - Auto-redirect on success
+ * - Auto-logout when visiting this page (clears any existing session)
  */
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+
+  // Clear session when component mounts (user visits login page)
+  useEffect(() => {
+    // Clear any existing auth data
+    localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
+    useAuthStore.setState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+    });
+  }, []);
 
   const { mutate: login, isPending, error } = useLogin();
 
