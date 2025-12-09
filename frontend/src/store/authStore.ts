@@ -72,28 +72,45 @@ export const useAuthStore = create<AuthState>((set) => ({
   /**
    * Initialize auth from localStorage on app startup
    *
-   * This restores the user session if they refresh the page
+   * This validates the token with the backend and restores the user session
+   * If the token is invalid or expired, it clears the session
    */
-  initializeAuth: () => {
-    const userStr = localStorage.getItem('user');
+  initializeAuth: async () => {
     const token = localStorage.getItem('access_token');
 
-    if (userStr && token) {
-      try {
-        const user = JSON.parse(userStr) as User;
+    if (!token) {
+      set({ isInitialized: true });
+      return;
+    }
+
+    try {
+      // Validate token by fetching user profile from backend
+      const response = await fetch('http://localhost:3000/auth/profile', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const user = await response.json();
         set({
           user,
           token,
           isAuthenticated: true,
           isInitialized: true,
         });
-      } catch (error) {
-        // Invalid JSON in localStorage, clear it
+        // Update localStorage with fresh user data
+        localStorage.setItem('user', JSON.stringify(user));
+      } else {
+        // Token is invalid or expired, clear session
         localStorage.removeItem('user');
         localStorage.removeItem('access_token');
         set({ isInitialized: true });
       }
-    } else {
+    } catch (error) {
+      // Network error or backend down, clear session
+      localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
       set({ isInitialized: true });
     }
   },

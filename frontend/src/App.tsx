@@ -6,6 +6,9 @@ import DashboardPage from './pages/DashboardPage';
 import RetailersPage from './pages/RetailersPage';
 import AdminPage from './pages/AdminPage';
 import SettingsPage from './pages/SettingsPage';
+import ImportCSVPage from './pages/ImportCSVPage';
+import BulkAssignmentPage from './pages/BulkAssignmentPage';
+import SalesRepsPage from './pages/SalesRepsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 /**
@@ -16,6 +19,8 @@ import ProtectedRoute from './components/ProtectedRoute';
  * - /dashboard - Protected dashboard (requires auth)
  * - /retailers - Protected retailers list (requires auth)
  * - /admin - Protected admin reference data page (requires auth + ADMIN role)
+ * - /import-csv - Protected CSV import page (requires auth + ADMIN role)
+ * - /bulk-assignment - Protected bulk assignment page (requires auth + ADMIN role)
  * - /settings - Protected settings page (requires auth)
  * - / - Redirects to dashboard if logged in, otherwise to login
  */
@@ -78,6 +83,33 @@ function App() {
           element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/import-csv"
+          element={
+            <ProtectedRoute>
+              <ImportCSVPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/bulk-assignment"
+          element={
+            <ProtectedRoute>
+              <BulkAssignmentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/salesreps"
+          element={
+            <ProtectedRoute>
+              <SalesRepsPage />
             </ProtectedRoute>
           }
         />

@@ -28,6 +28,17 @@ export interface LoginResponse {
   user: User;
 }
 
+export interface SalesRep {
+  id: number;
+  username: string;
+  name: string;
+  phone: string;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ============================================
 // REFERENCE DATA TYPES
 // ============================================
@@ -68,6 +79,18 @@ export interface Distributor {
 // RETAILER TYPES
 // ============================================
 
+export interface RetailerAssignment {
+  id: number;
+  salesRepId: number;
+  retailerId: number;
+  salesRep: {
+    id: number;
+    name: string;
+    username: string;
+  };
+  createdAt: string;
+}
+
 export interface Retailer {
   id: number;
   uid: string;
@@ -87,6 +110,7 @@ export interface Retailer {
   area?: Area;
   distributor?: Distributor;
   territory?: Territory;
+  assignments?: RetailerAssignment[];
 
   createdAt?: string;
   updatedAt?: string;
@@ -157,6 +181,13 @@ export interface BulkAssignmentRequest {
     salesRepId: number;
     retailerId: number;
   }>;
+}
+
+export interface DashboardStats {
+  totalRetailers: number;
+  totalSalesReps: number;
+  activeRetailersThisWeek: number;
+  totalPoints: number;
 }
 
 export interface ImportCSVResponse {

@@ -1,4 +1,4 @@
-import { Box, Typography, Card, CardContent, Button } from '@mui/material';
+import { Box, Typography, Card, CardContent, Button, CircularProgress, Alert } from '@mui/material';
 import {
   Store as StoreIcon,
   Assessment as AssessmentIcon,
@@ -7,6 +7,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { useDashboardStats } from '../hooks/useAdmin';
 import Layout from '../components/Layout';
 
 /**
@@ -21,6 +22,9 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const isAdmin = user?.role === 'ADMIN';
 
+  // Fetch dashboard stats (only for admin)
+  const { data: stats, isLoading, error } = useDashboardStats();
+
   return (
     <Layout>
       <Box>
@@ -33,6 +37,13 @@ export default function DashboardPage() {
             Here's what's happening with your business today.
           </Typography>
         </Box>
+
+        {/* Error State */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            Failed to load dashboard statistics. Please try again.
+          </Alert>
+        )}
 
         {/* Stats Cards */}
         <Box
@@ -53,7 +64,7 @@ export default function DashboardPage() {
                 <StoreIcon sx={{ fontSize: 40, color: 'primary.main' }} />
                 <Box>
                   <Typography variant="h4" fontWeight={600}>
-                    --
+                    {isLoading ? <CircularProgress size={32} /> : stats?.totalRetailers || '--'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Total Retailers
@@ -69,7 +80,7 @@ export default function DashboardPage() {
                 <TrendingUpIcon sx={{ fontSize: 40, color: 'success.main' }} />
                 <Box>
                   <Typography variant="h4" fontWeight={600}>
-                    --
+                    {isLoading ? <CircularProgress size={32} /> : stats?.activeRetailersThisWeek || '--'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Active This Week
@@ -87,7 +98,7 @@ export default function DashboardPage() {
                     <PeopleIcon sx={{ fontSize: 40, color: 'info.main' }} />
                     <Box>
                       <Typography variant="h4" fontWeight={600}>
-                        --
+                        {isLoading ? <CircularProgress size={32} /> : stats?.totalSalesReps || '--'}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Sales Reps
@@ -103,7 +114,7 @@ export default function DashboardPage() {
                     <AssessmentIcon sx={{ fontSize: 40, color: 'warning.main' }} />
                     <Box>
                       <Typography variant="h4" fontWeight={600}>
-                        --
+                        {isLoading ? <CircularProgress size={32} /> : stats?.totalPoints?.toLocaleString() || '--'}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Total Points

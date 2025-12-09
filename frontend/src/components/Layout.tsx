@@ -22,6 +22,9 @@ import {
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   AdminPanelSettings as AdminIcon,
+  CloudUpload as ImportIcon,
+  AssignmentInd as BulkAssignIcon,
+  People as PeopleIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -60,7 +63,10 @@ export default function Layout({ children }: LayoutProps) {
     { label: 'Retailers', icon: <StoreIcon />, path: '/retailers' },
     ...(isAdmin
       ? [
+          { label: 'Sales Reps', icon: <PeopleIcon />, path: '/salesreps' },
           { label: 'Reference Data', icon: <AdminIcon />, path: '/admin' },
+          { label: 'Import CSV', icon: <ImportIcon />, path: '/import-csv' },
+          { label: 'Bulk Assignment', icon: <BulkAssignIcon />, path: '/bulk-assignment' },
           { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
         ]
       : []),

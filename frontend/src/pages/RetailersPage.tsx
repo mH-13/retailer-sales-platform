@@ -16,15 +16,22 @@ import {
   Typography,
   CircularProgress,
   Alert,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Button,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Edit as EditIcon,
   FilterList as FilterIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import EditRetailerDialog from '../components/EditRetailerDialog';
 import { useRetailers } from '../hooks/useRetailers';
+import { useRegions, useAreas, useTerritories, useDistributors } from '../hooks/useAdmin';
 import type { Retailer } from '../types';
 
 /**
@@ -40,14 +47,33 @@ export default function RetailersPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState('');
+  const [regionFilter, setRegionFilter] = useState<number | ''>('');
+  const [areaFilter, setAreaFilter] = useState<number | ''>('');
+  const [territoryFilter, setTerritoryFilter] = useState<number | ''>('');
+  const [distributorFilter, setDistributorFilter] = useState<number | ''>('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
+
+  // Fetch reference data for filters
+  const { data: regionsData } = useRegions();
+  const { data: areasData } = useAreas();
+  const { data: territoriesData } = useTerritories();
+  const { data: distributorsData } = useDistributors();
+
+  const regions = regionsData || [];
+  const areas = areasData || [];
+  const territories = territoriesData || [];
+  const distributors = distributorsData || [];
 
   // Fetch retailers with current filters
   const { data, isLoading, error } = useRetailers({
     page: page + 1, // Backend uses 1-indexed pages
     limit: rowsPerPage,
     search: search || undefined,
+    regionId: regionFilter || undefined,
+    areaId: areaFilter || undefined,
+    territoryId: territoryFilter || undefined,
+    distributorId: distributorFilter || undefined,
   });
 
   const retailers = data?.data || [];
@@ -82,6 +108,17 @@ export default function RetailersPage() {
     setSelectedRetailer(null);
   };
 
+  const handleClearFilters = () => {
+    setRegionFilter('');
+    setAreaFilter('');
+    setTerritoryFilter('');
+    setDistributorFilter('');
+    setSearch('');
+    setPage(0);
+  };
+
+  const hasActiveFilters = regionFilter || areaFilter || territoryFilter || distributorFilter || search;
+
   return (
     <Layout>
       <Box>
@@ -99,12 +136,14 @@ export default function RetailersPage() {
 
         {/* Search and Filters */}
         <Paper sx={{ p: 2, mb: 3 }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {/* Search Bar */}
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
             <TextField
               placeholder="Search by name, phone, or UID..."
               value={search}
               onChange={handleSearchChange}
               sx={{ flexGrow: 1 }}
+              size="small"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -113,9 +152,104 @@ export default function RetailersPage() {
                 ),
               }}
             />
-            <IconButton color="primary">
-              <FilterIcon />
-            </IconButton>
+            {hasActiveFilters && (
+              <Button
+                variant="outlined"
+                startIcon={<ClearIcon />}
+                onClick={handleClearFilters}
+                size="small"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </Box>
+
+          {/* Filter Dropdowns */}
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <FilterIcon color="action" />
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Region</InputLabel>
+              <Select
+                value={regionFilter}
+                label="Region"
+                onChange={(e) => {
+                  setRegionFilter(e.target.value as number | '');
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="">All Regions</MenuItem>
+                {regions.map((region) => (
+                  <MenuItem key={region.id} value={region.id}>
+                    {region.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Area</InputLabel>
+              <Select
+                value={areaFilter}
+                label="Area"
+                onChange={(e) => {
+                  setAreaFilter(e.target.value as number | '');
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="">All Areas</MenuItem>
+                {areas.map((area) => (
+                  <MenuItem key={area.id} value={area.id}>
+                    {area.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Territory</InputLabel>
+              <Select
+                value={territoryFilter}
+                label="Territory"
+                onChange={(e) => {
+                  setTerritoryFilter(e.target.value as number | '');
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="">All Territories</MenuItem>
+                {territories.map((territory) => (
+                  <MenuItem key={territory.id} value={territory.id}>
+                    {territory.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Distributor</InputLabel>
+              <Select
+                value={distributorFilter}
+                label="Distributor"
+                onChange={(e) => {
+                  setDistributorFilter(e.target.value as number | '');
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="">All Distributors</MenuItem>
+                {distributors.map((distributor) => (
+                  <MenuItem key={distributor.id} value={distributor.id}>
+                    {distributor.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {hasActiveFilters && (
+              <Chip
+                label={`${pagination.total} result${pagination.total !== 1 ? 's' : ''}`}
+                color="primary"
+                size="small"
+              />
+            )}
           </Box>
         </Paper>
 

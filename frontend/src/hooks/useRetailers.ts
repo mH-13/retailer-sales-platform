@@ -36,8 +36,19 @@ export const useRetailers = (params: GetRetailersParams = {}) => {
   return useQuery({
     queryKey: ['retailers', params],
     queryFn: async () => {
+      // Transform parameter names to match backend API
+      const queryParams = {
+        page: params.page,
+        limit: params.limit,
+        search: params.search,
+        region: params.regionId,
+        area: params.areaId,
+        territory: params.territoryId,
+        distributor: params.distributorId,
+      };
+
       const response = await api.get<PaginatedResponse<Retailer>>('/retailers', {
-        params,
+        params: queryParams,
       });
       return response.data;
     },

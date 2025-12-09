@@ -5,12 +5,14 @@ import type {
   Area,
   Territory,
   Distributor,
+  SalesRep,
   CreateRegionRequest,
   CreateAreaRequest,
   CreateTerritoryRequest,
   CreateDistributorRequest,
   BulkAssignmentRequest,
   ImportCSVResponse,
+  DashboardStats,
 } from '../types';
 
 /**
@@ -306,6 +308,20 @@ export const useBulkAssignment = () => {
   });
 };
 
+export const useDeleteAssignment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (assignmentId: number) => {
+      const response = await api.delete(`/admin/assignments/${assignmentId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['retailers'] });
+    },
+  });
+};
+
 export const useImportRetailers = () => {
   const queryClient = useQueryClient();
 
@@ -327,6 +343,31 @@ export const useImportRetailers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['retailers'] });
+    },
+  });
+};
+
+
+// ============================================
+// SALES REPS HOOKS
+// ============================================
+
+export const useSalesReps = () => {
+  return useQuery({
+    queryKey: ['salesreps'],
+    queryFn: async () => {
+      const response = await api.get<SalesRep[]>('/admin/salesreps');
+      return response.data;
+    },
+  });
+};
+
+export const useDashboardStats = () => {
+  return useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: async () => {
+      const response = await api.get<DashboardStats>('/retailers/stats/dashboard');
+      return response.data;
     },
   });
 };
