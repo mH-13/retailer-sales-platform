@@ -45,81 +45,122 @@ retailer-sales-platform/
 - Node.js 18+
 - Git
 
-### Setup Instructions
+### Clone & Run
 
-**1. Clone repository**
 ```bash
+# 1. Clone repository
 git clone <repository-url>
 cd retailer-sales-platform
-```
 
-**2. Start backend** (see [backend/README.md](backend/README.md) for details)
-```bash
+# 2. Setup and seed backend database
 cd backend
 cp .env.example .env
-docker-compose up -d
 npm install
-npx prisma migrate deploy
-npx prisma db seed
-npm run start:dev
-```
+docker-compose up -d postgres redis    # Start database & cache only
+npx prisma migrate deploy              # Run migrations
+npx prisma db seed                     # Seed test data
+docker-compose up --build -d           # Start all services (including backend API)
 
-**3. Start frontend** (see [frontend/README.md](frontend/README.md) for details)
-```bash
-cd frontend
+# 3. Setup and start frontend (in new terminal)
+cd ../frontend
 cp .env.example .env
 npm install
 npm run dev
 ```
 
-**4. Access**
+**Access the application:**
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3000
 - **Swagger UI**: http://localhost:3000/api
 
-### Backend Setup (Detailed)
+**Default credentials:**
+- Admin: `admin` / `password123`
+- Sales Rep: `karim_sr` / `password123`
 
-**1. Navigate to backend**
+### What's Running?
+
+Docker Compose starts 3 containers:
+- **PostgreSQL** (port 5432) - Database with seeded data
+- **Redis** (port 6379) - Cache layer
+- **NestJS Backend** (port 3000) - API server
+
+Frontend runs separately via Vite dev server (port 5173).
+
+### Stopping the Application
+
+```bash
+# Stop backend services
+cd backend
+docker-compose down
+
+# Stop frontend (Ctrl+C in terminal)
+```
+
+### Detailed Setup (if needed)
+
+<details>
+<summary>Expand for step-by-step instructions</summary>
+
+**Backend Setup:**
+
+1. Navigate to backend directory
 ```bash
 cd backend
 ```
 
-**2. Create environment file** (or copy from .env.example)
+2. Create environment file (or copy from .env.example)
 ```bash
-cat > .env << 'EOF'
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/retailer_db?schema=public"
-REDIS_HOST=localhost
-REDIS_PORT=6379
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_EXPIRES_IN=7d
-EOF
+cp .env.example .env
+# Default values work out of the box for local development
 ```
 
-**3. Start services**
-```bash
-docker-compose up -d
-```
-
-**4. Install dependencies**
+3. Install dependencies
 ```bash
 npm install
 ```
 
-**5. Run migrations and seed**
+4. Run database migrations and seed data
 ```bash
 npx prisma migrate deploy
 npx prisma db seed
 ```
 
-**6. Start application**
+5. Start Docker services (PostgreSQL, Redis, Backend API)
 ```bash
-npm run start:dev
+docker-compose up --build -d
 ```
 
-**7. Verify backend is running**
+6. Verify backend is running
 - **API**: http://localhost:3000
 - **Swagger UI**: http://localhost:3000/api
 - **Prisma Studio**: `npx prisma studio` → http://localhost:5555
+
+**Frontend Setup:**
+
+1. Navigate to frontend directory
+```bash
+cd frontend
+```
+
+2. Create environment file
+```bash
+cp .env.example .env
+# Default value: VITE_API_URL=http://localhost:3000
+```
+
+3. Install dependencies
+```bash
+npm install
+```
+
+4. Start development server
+```bash
+npm run dev
+```
+
+5. Access at http://localhost:5173
+
+</details>
 
 ### Test Users
 
