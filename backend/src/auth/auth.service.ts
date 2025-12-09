@@ -104,4 +104,36 @@ export class AuthService {
 
     return user; // This gets attached to request.user
   }
+
+  /**
+   * Get user profile by ID
+   * Used for validating tokens and fetching fresh user data
+   * @param userId - User ID from JWT token
+   * @returns User profile without password
+   */
+  async getProfile(userId: number) {
+    const user = await this.prisma.salesRep.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    return user;
+  }
 }

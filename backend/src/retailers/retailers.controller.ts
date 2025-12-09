@@ -224,4 +224,37 @@ export class RetailersController {
   ) {
     return this.retailersService.update(uid, user.id, user.role, updateData);
   }
+
+  /**
+   * GET /retailers/stats/dashboard - Get dashboard statistics
+   *
+   * Returns stats based on user role:
+   * - Admin: All retailers stats
+   * - SR: Only assigned retailers stats
+   */
+  @Get('stats/dashboard')
+  @ApiOperation({
+    summary: 'Get dashboard statistics',
+    description:
+      'Returns dashboard statistics. Admins see all retailers, SRs see only their assigned retailers.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved statistics',
+    schema: {
+      example: {
+        totalRetailers: 210,
+        activeRetailersThisWeek: 45,
+        totalSalesReps: 3,
+        totalPoints: 125000,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  async getDashboardStats(@CurrentUser() user: any) {
+    return this.retailersService.getDashboardStats(user.id, user.role);
+  }
 }

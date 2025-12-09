@@ -108,12 +108,23 @@ async function main() {
 
   for (let srIndex = 0; srIndex < salesReps.length; srIndex++) {
     const sr = salesReps[srIndex];
-    const regionIndex = srIndex % regions.length;
-    const areaIndex = srIndex % areas.length;
-    const distributorIndex = srIndex % distributors.length;
 
     for (let i = 1; i <= 70; i++) {
       const retailerNum = (srIndex * 70) + i;
+
+      // Distribute retailers across all regions, areas, territories, and distributors
+      const regionIndex = retailerNum % regions.length;
+      const areaIndex = retailerNum % areas.length;
+      const distributorIndex = retailerNum % distributors.length;
+
+      // Find a territory that belongs to the selected area
+      // Filter territories by area, or fall back to first territory
+      const areaTerritories = territories.filter(t => t.areaId === areas[areaIndex].id);
+      const territoryIndex = areaTerritories.length > 0
+        ? (retailerNum % areaTerritories.length)
+        : 0;
+      const selectedTerritory = areaTerritories[territoryIndex] || territories[0];
+
       const uid = `RET-${regions[regionIndex].name.substring(0, 3).toUpperCase()}-${String(retailerNum).padStart(4, '0')}`;
 
       retailerPromises.push(
@@ -125,7 +136,7 @@ async function main() {
             regionId: regions[regionIndex].id,
             areaId: areas[areaIndex].id,
             distributorId: distributors[distributorIndex].id,
-            territoryId: territories[0].id,
+            territoryId: selectedTerritory.id,
             points: Math.floor(Math.random() * 5000),
             routes: `Route-${Math.floor(Math.random() * 10) + 1}, Route-${Math.floor(Math.random() * 10) + 1}`,
             notes: i % 5 === 0 ? 'High value customer' : undefined,

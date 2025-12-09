@@ -472,6 +472,106 @@ export class AdminService {
     }
   }
 
+  /**
+   * Delete a retailer assignment
+   * Removes a sales rep assignment from a retailer
+   */
+  async deleteAssignment(id: number) {
+    // Check if assignment exists
+    const assignment = await this.prisma.salesRepRetailer.findUnique({
+      where: { id },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException(`Assignment with ID ${id} not found`);
+    }
+
+    // Delete the assignment
+    await this.prisma.salesRepRetailer.delete({
+      where: { id },
+    });
+
+    return {
+      message: 'Assignment deleted successfully',
+    };
+  }
+
+  // ========================================
+  // SALES REPS
+  // ========================================
+
+  /**
+   * Get all sales representatives
+   * Returns list of all sales reps without password hash
+   */
+  async getAllSalesReps() {
+    const salesReps = await this.prisma.salesRep.findMany({
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        // Exclude passwordHash for security
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+
+    return salesReps;
+  }
+
+  /**
+   * Get dashboard statistics
+   * Returns key metrics for admin dashboard
+   */
+  async getDashboardStats() {
+    // Calculate date for "this week" (last 7 days)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    // Run all queries in parallel for performance
+    const [totalRetailers, totalSalesReps, activeRetailersThisWeek, totalPointsResult] =
+      await Promise.all([
+        // Count total retailers
+        this.prisma.retailer.count(),
+
+        // Count sales reps (excluding admin role)
+        this.prisma.salesRep.count({
+          where: {
+            role: 'SR',
+          },
+        }),
+
+        // Count retailers updated in the last 7 days
+        this.prisma.retailer.count({
+          where: {
+            updatedAt: {
+              gte: oneWeekAgo,
+            },
+          },
+        }),
+
+        // Sum total points across all retailers
+        this.prisma.retailer.aggregate({
+          _sum: {
+            points: true,
+          },
+        }),
+      ]);
+
+    return {
+      totalRetailers,
+      totalSalesReps,
+      activeRetailersThisWeek,
+      totalPoints: totalPointsResult._sum.points || 0,
+    };
+  }
+
   // ========================================
   // CSV IMPORT
   // ========================================

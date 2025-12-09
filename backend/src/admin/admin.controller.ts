@@ -244,6 +244,99 @@ export class AdminController {
     return this.adminService.bulkAssignRetailers(bulkAssignmentDto);
   }
 
+  /**
+   * DELETE /admin/assignments/:id
+   * Delete (unassign) a retailer assignment
+   */
+  @Delete('assignments/:id')
+  @ApiOperation({
+    summary: 'Delete a retailer assignment',
+    description: 'Remove a sales rep assignment from a retailer',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assignment deleted successfully',
+    schema: {
+      example: {
+        message: 'Assignment deleted successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Assignment not found',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only admins can access',
+  })
+  async deleteAssignment(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.deleteAssignment(id);
+  }
+
+  // ========================================
+  // SALES REPS
+  // ========================================
+
+  /**
+   * GET /admin/salesreps
+   * Get all sales representatives
+   */
+  @Get('salesreps')
+  @ApiOperation({
+    summary: 'Get all sales representatives',
+    description: 'Retrieve list of all sales reps with their basic information',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved sales reps',
+    schema: {
+      example: [
+        {
+          id: 1,
+          username: 'admin',
+          name: 'Admin User',
+          phone: '+8801711111111',
+          role: 'ADMIN',
+          isActive: true,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+      ],
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only admins can access',
+  })
+  async getAllSalesReps() {
+    return this.adminService.getAllSalesReps();
+  }
+
+  /**
+   * GET /admin/stats
+   * Get dashboard statistics
+   */
+  @Get('stats')
+  @ApiOperation({
+    summary: 'Get dashboard statistics',
+    description: 'Retrieve stats for admin dashboard (total retailers, active, sales reps, etc.)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved stats',
+    schema: {
+      example: {
+        totalRetailers: 210,
+        totalSalesReps: 3,
+        activeRetailersThisWeek: 45,
+        totalPoints: 125000,
+      },
+    },
+  })
+  async getDashboardStats() {
+    return this.adminService.getDashboardStats();
+  }
+
   // ========================================
   // CSV IMPORT
   // ========================================

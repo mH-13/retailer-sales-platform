@@ -238,4 +238,67 @@ export class RetailersService {
 
     return updated;
   }
+
+  /**
+   * Get dashboard statistics based on user role
+   *
+   * Admin: All retailers stats
+   * SR: Only assigned retailers stats
+   *
+   * @param userId - User ID from JWT
+   * @param userRole - User role ('ADMIN' or 'SR')
+   * @returns Dashboard statistics
+   */
+  async getDashboardStats(userId: number, userRole: string) {
+    // Calculate date for "this week" (last 7 days)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    // Build where clause based on role
+    const where: any = {};
+
+    // Authorization: SRs only see assigned retailers
+    if (userRole === 'SR') {
+      where.assignments = {
+        some: { salesRepId: userId },
+      };
+    }
+    // Admins see all retailers (no filter)
+
+    // Run all queries in parallel for performance
+    const [totalRetailers, activeRetailersThisWeek, totalPointsResult] =
+      await Promise.all([
+        // Count total retailers (filtered by role)
+        this.prisma.retailer.count({ where }),
+
+        // Count active retailers this week (updated in last 7 days)
+        this.prisma.retailer.count({
+          where: {
+            ...where,
+            updatedAt: { gte: oneWeekAgo },
+          },
+        }),
+
+        // Sum total points
+        this.prisma.retailer.aggregate({
+          where,
+          _sum: { points: true },
+        }),
+      ]);
+
+    // For admins, also count total sales reps
+    let totalSalesReps = 0;
+    if (userRole === 'ADMIN') {
+      totalSalesReps = await this.prisma.salesRep.count({
+        where: { role: 'SR' },
+      });
+    }
+
+    return {
+      totalRetailers,
+      activeRetailersThisWeek,
+      totalSalesReps,
+      totalPoints: totalPointsResult._sum.points || 0,
+    };
+  }
 }
